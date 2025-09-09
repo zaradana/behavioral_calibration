@@ -1,12 +1,14 @@
-import os
+import json
 import logging
-from typing import Dict, Any, List
-from schema import AnswerResponse, ModelConfig
+import os
+from typing import Any, Dict, List
+
 from dotenv import load_dotenv
 from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
+
 from config import OPENROUTER_BASE_URL
-import json
+from schema import AnswerResponse, ModelConfig
 
 load_dotenv()
 

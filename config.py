@@ -1,5 +1,7 @@
 import os
+
 from dotenv import load_dotenv
+
 from schema import ModelConfig
 
 load_dotenv()

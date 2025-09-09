@@ -1,8 +1,10 @@
+import math
 import os
 from typing import Dict
+
 import matplotlib.pyplot as plt
+
 from config import OUTPUT_DIR
-import math
 from utils import get_logger
 
 logger = get_logger(__name__)

@@ -1,22 +1,21 @@
-import pandas as pd
-import math
-import os
 import asyncio
-from typing import Dict, Any
-from agent import get_agent
-from evaluation import summarize_behavioral, inconsistency_rates, evaluate_model
-from visualization import plot_overlays
-from config import MODELS, OUTPUT_DIR, TARGETS
+import math
 from datetime import datetime
-from utils import get_logger, save_model_results
-from schema import ModelConfig
+from typing import Dict
+
+import pandas as pd
+
+from agent import get_agent
+from config import MODELS, OUTPUT_DIR, TARGETS
 from data_loader import DATA
+from evaluation import evaluate_model, inconsistency_rates, summarize_behavioral
+from utils import get_logger, save_model_results
+from visualization import plot_overlays
 
 logger = get_logger(__name__)
 
 
 async def main():
-
     results_by_model: Dict[str, Dict[float, Dict[str, float]]] = {}
     output = []
     output_filename = f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}"

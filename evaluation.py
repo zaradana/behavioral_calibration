@@ -1,6 +1,6 @@
-import asyncio
-from typing import Dict, Any, List, Tuple
-from schema import ItemEval, ModelConfig
+from typing import Any, Dict, List, Tuple
+
+from schema import ItemEval
 from utils import correctness_heuristic
 
 
