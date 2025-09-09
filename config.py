@@ -72,12 +72,6 @@ MODELS = [
         is_free=True,
     ),
     ModelConfig(
-        model_name="nemotron-nano-9b-v2",
-        model_path="nvidia/nemotron-nano-9b-v2",
-        accepts_image=False,
-        is_free=True,
-    ),
-    ModelConfig(
         model_name="sonoma-sky-alpha",
         model_path="openrouter/sonoma-sky-alpha",
         accepts_image=True,
