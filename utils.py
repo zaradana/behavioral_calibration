@@ -49,4 +49,3 @@ def save_model_results(
                 }
             )
     pd.DataFrame(output).to_csv(output_filename, index=False)
-    logger.info("Results saved to %s", output_filename)

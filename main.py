@@ -30,6 +30,7 @@ async def main():
         save_model_results(
             per_t, f"{OUTPUT_DIR}/{model_name}/{model_name}_{output_filename}.csv"
         )
+        logger.info("Results saved to %s", output_filename)
         results_by_model[model_name] = {}
 
         logger.info(f"\nModel: {model_name}")

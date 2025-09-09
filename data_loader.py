@@ -1,6 +1,6 @@
 from datasets import load_dataset
 
-from config import BENCHMARK_DATASET
+from config import BENCHMARK_DATASET, DEV_MODE
 
 # Login using e.g. `huggingface-cli login` to access this dataset
 DATA_REAL = load_dataset(BENCHMARK_DATASET, split="test")
