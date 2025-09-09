@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Tuple
 
+from config import DEV_MODE
 from schema import ItemEval
 from utils import correctness_heuristic
 
@@ -24,11 +25,7 @@ async def evaluate_model(
             decision = obj["decision"]
             ans = obj["answer"]
             conf = float(obj["confidence"])
-            is_correct = (
-                correctness_heuristic(ans, item["expect_substrings"])
-                if decision == "answer"
-                else False
-            )
+            is_correct = calculate_correctness(ans, item)
             pay = payoff_value(is_correct, decision, t)
             rows.append(
                 ItemEval(
@@ -42,6 +39,18 @@ async def evaluate_model(
             )
         out[t] = rows
     return out
+
+
+def calculate_correctness(ans, item, decision):
+    if DEV_MODE:
+        return (
+            correctness_heuristic(ans, item["expect_substrings"])
+            if decision == "answer"
+            else False
+        )
+    else:
+        # TODO: run SWE bench runner
+        return False
 
 
 def summarize_behavioral(rows: List[ItemEval]) -> Tuple[float, float, float]:

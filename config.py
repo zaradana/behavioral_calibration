@@ -16,7 +16,7 @@ if not OPENROUTER_API_KEY:
 BENCHMARK_DATASET = "SWE-bench/SWE-bench_Lite"
 DEV_MODE = True
 
-TARGETS = [0.5 , 0.7, 0.9]
+TARGETS = [0.5, 0.7, 0.9]
 
 # Check model IDs against your OpenRouter catalog
 MODELS = [

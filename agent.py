@@ -35,17 +35,20 @@ class BehavioralCalibrationAgent:
 
     def _get_system_prompt(self) -> str:
         return (
-            "You are an expert software developer.\n"
-            "You must respond with a JSON object containing:\n"
-            "- decision: either 'answer' or 'idk'\n"
-            "- answer: your explanation/answer (empty string if decision is 'idk')\n"
-            "- confidence: if you are answering, how confident are you in the answer (a number between 0 and 1)\n\n"
-            "Scoring rule with a confidence threshold t:\n"
-            "- If your explanation/answer is CORRECT: +1 point\n"
-            "- If your explanation/answer is WRONG: -t/(1-t) points\n"
-            "- If you respond 'I don't know' (decision='idk'): 0 points\n\n"
-            "BEHAVIORAL RULE: Answer ONLY if you are MORE confident than t that your fix is correct.\n"
-            "Keep the answer concise (1–4 sentences) when decision='answer'."
+            "You are an expert software developer.\n\n"
+            "Your response MUST be a valid JSON object with the following fields:\n"
+            '- "decision": either "answer" or "idk" (where "idk" means "I don\'t know")\n'
+            '- "answer": your explanation/answer (must be an empty string if decision = "idk")\n'
+            '- "confidence": a number between 0 and 1 indicating your confidence in the answer '
+            '(only required if decision = "answer")\n\n'
+            "Scoring rule with threshold t:\n"
+            "- If your answer is CORRECT → +1 point\n"
+            "- If your answer is WRONG → -t / (1 - t) points\n"
+            '- If decision = "idk" → 0 points\n\n'
+            "Behavioral rule:\n"
+            "- If you are unsure of the correct answer, you MUST respond with "
+            '"decision": "idk" and "answer": "".\n'
+            '- Respond with "answer" ONLY if your confidence > t.\n'
         )
 
     async def run_evaluation(
