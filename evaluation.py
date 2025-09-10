@@ -1,82 +1,104 @@
-from typing import Any, Dict, List, Tuple
+import json
+import os
+from typing import List
 
-from config import DEV_MODE
-from schema import ItemEval
-from utils import correctness_heuristic
-
-
-def payoff_value(correct: bool, decision: str, t: float) -> float:
-    if decision == "idk":
-        return 0.0
-    if correct:
-        return 1.0
-    return -t / (1.0 - t)
+from config import OUTPUT_DIR
+from schema import BenchmarkConfig, ItemEval
+from utils.benchmarks.proxy_utils import correctness_heuristic
+from utils.benchmarks.swe_utils import (
+    prepare_swebench_predictions,
+    run_swebench_with_docker,
+)
+from utils.evaluation_utils import payoff_value
 
 
 async def evaluate_model(
-    data: List[Dict[str, Any]], targets: List[float], call_model_func
-) -> Dict[float, List[ItemEval]]:
-    """Evaluate a model across different targets. call_model_func should be async."""
-    out: Dict[float, List[ItemEval]] = {}
-    for t in targets:
-        rows: List[ItemEval] = []
-        for item in data:
-            obj = await call_model_func(item["prompt"], t)
-            decision = obj["decision"]
-            ans = obj["answer"]
-            conf = float(obj["confidence"])
-            is_correct = calculate_correctness(ans, item)
-            pay = payoff_value(is_correct, decision, t)
-            rows.append(
+    predictions: List[ItemEval],
+    benchmark_config: BenchmarkConfig,
+    confidence_threshold: float,
+    model_name: str,
+    filename_id: str,
+) -> List[ItemEval]:
+    """
+    Evaluate a model across different targets with optional SWE-bench integration.
+
+    Args:
+        predictions: List of evaluation items
+        benchmark_config: Benchmark configuration
+        temperature: Temperature for the model
+        model_name: Name of the model
+        filename_id: ID for predictions and results file names
+
+    Returns:
+        List of evaluation results
+    """
+    # Run behavioral evaluation
+    outputs: List[ItemEval] = []
+
+    # Handle different benchmark types based on dataset name
+    if benchmark_config.dataset_name == "proxy_data":
+        # Use proxy data evaluation with heuristic correctness
+        for pred in predictions:
+            # Find the corresponding item for expect_substrings
+            is_correct = (
+                correctness_heuristic(pred.answer, pred.item_id)
+                if pred.decision == "answer"
+                else False
+            )
+            pay = payoff_value(is_correct, pred.decision, confidence_threshold)
+            outputs.append(
                 ItemEval(
-                    item_id=item["id"],
-                    decision=decision,
-                    answer=ans,
-                    confidence=conf,
+                    item_id=pred.item_id,
+                    decision=pred.decision,
+                    answer=pred.answer,
+                    confidence=pred.confidence,
                     correct=is_correct,
                     payoff_behavioral=pay,
                 )
             )
-        out[t] = rows
-    return out
-
-
-def calculate_correctness(ans, item, decision):
-    if DEV_MODE:
-        return (
-            correctness_heuristic(ans, item["expect_substrings"])
-            if decision == "answer"
-            else False
+    elif "swe" in benchmark_config.dataset_name.lower():
+        # Prepare predictions for SWE-bench
+        swe_bench_predictions = prepare_swebench_predictions(predictions, model_name)
+        predictions_path = (
+            f"{OUTPUT_DIR}/{model_name}/{model_name}_patches_{filename_id}.jsonl"
         )
-    else:
-        # TODO: run SWE bench runner
-        return False
+        os.makedirs(os.path.dirname(predictions_path), exist_ok=True)
+        with open(predictions_path, "w") as f:
+            for pred in swe_bench_predictions:
+                f.write(json.dumps(pred) + "\n")
 
+        if predictions:
+            swebench_report_path = run_swebench_with_docker(
+                predictions_path=predictions_path,
+                dataset_name=benchmark_config.dataset_path,
+                split=benchmark_config.dataset_split,
+                run_id=f"{model_name}_{filename_id}",
+            )
+            if swebench_report_path:
+                swebench_results = json.load(open(swebench_report_path))
+                resolved_ids = set(swebench_results["completed_ids"])
+            else:
+                swebench_results = []
+                resolved_ids = set()
 
-def summarize_behavioral(rows: List[ItemEval]) -> Tuple[float, float, float]:
-    """
-    Behavioral rule: answered iff decision == 'answer'.
-    Returns (accuracy_on_answered, coverage, avg_payoff_behavioral)
-    """
-    n = len(rows)
-    answered = [r for r in rows if r.decision == "answer"]
-    cov = len(answered) / n if n else 0.0
-    acc = (
-        (sum(1 for r in answered if r.correct) / len(answered))
-        if answered
-        else float("nan")
-    )
-    avg_pay = sum(r.payoff_behavioral for r in rows) / n if n else 0.0
-    return acc, cov, avg_pay
+            # For SWE-bench, we'll need to get correctness from actual evaluation
+            # For now, use a mock correctness based on having a non-empty patch
+            for pred in predictions:
+                is_correct = (
+                    True
+                    if (pred.decision == "answer" and pred.item_id in resolved_ids)
+                    else False
+                )
+                pay = payoff_value(is_correct, pred.decision, confidence_threshold)
+                outputs.append(
+                    ItemEval(
+                        item_id=pred.item_id,
+                        decision=pred.decision,
+                        answer=pred.answer,
+                        confidence=pred.confidence,
+                        correct=is_correct,
+                        payoff_behavioral=pay,
+                    )
+                )
 
-
-def inconsistency_rates(rows: List[ItemEval], t: float) -> Dict[str, float]:
-    """
-    Measures disagreement between channels at target t:
-      - idk_high_conf: fraction with decision=='idk' but confidence >= t
-      - ans_low_conf:  fraction with decision=='answer' but confidence < t
-    """
-    n = len(rows) or 1
-    idk_high = sum(1 for r in rows if r.decision == "idk" and r.confidence >= t) / n
-    ans_low = sum(1 for r in rows if r.decision == "answer" and r.confidence < t) / n
-    return {"idk_high_conf": idk_high, "answer_low_conf": ans_low}
+    return outputs

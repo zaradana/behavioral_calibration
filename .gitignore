@@ -6,7 +6,10 @@ dist/
 wheels/
 output/
 logs/
+scratch_files/
+data/
 *.egg-info
+*.json
 
 # Virtual environments
 .venv

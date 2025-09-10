@@ -1,12 +1,11 @@
+from typing import Dict, List
+
 from datasets import load_dataset
 
-from config import BENCHMARK_DATASET, DEV_MODE
-
-# Login using e.g. `huggingface-cli login` to access this dataset
-DATA_REAL = load_dataset(BENCHMARK_DATASET, split="test")
+from schema import BenchmarkConfig
 
 # SWE-style proxy problems (expand or swap for actual SWE-bench runner)
-DATA_PROXY = [
+raw_proxy_dataset = [
     {
         "id": "bug-001",
         "prompt": (
@@ -35,4 +34,30 @@ DATA_PROXY = [
     # Add more items or wire up a repo+tests harness
 ]
 
-DATA = DATA_REAL if not DEV_MODE else DATA_PROXY
+
+def get_data(benchmark_config: BenchmarkConfig) -> List[Dict[str, str]]:
+    """Load data based on benchmark configuration.
+
+    Args:
+        benchmark_config: Configuration specifying dataset name, split, and whether to use proxy data
+
+    Returns:
+        List of data instances
+    """
+    try:
+        # Login using e.g. `huggingface-cli login` to access this dataset
+        # Only load dataset if not using proxy data
+        raw_dataset = load_dataset(
+            benchmark_config.dataset_path, split=benchmark_config.dataset_split
+        )
+    except Exception as e:
+        print(f"Warning: Failed to load dataset {benchmark_config.dataset_path}: {e}")
+        print("Falling back to proxy data")
+        raw_dataset = None
+
+    # Use proxy data if explicitly requested or if dataset loading failed
+    if benchmark_config.dataset_name == "proxy_data" or raw_dataset is None:
+        return raw_proxy_dataset
+
+    # For SWE-bench and other HuggingFace datasets - convert to list
+    return list(raw_dataset)

@@ -7,8 +7,9 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from config import OPENROUTER_BASE_URL
-from schema import AnswerResponse, ModelConfig
+from config import OPENROUTER_BASE_URL, TEMPERATURE
+from prompts.prompt_factory import PromptFactory
+from schema import AnswerResponse, BenchmarkConfig, ModelConfig
 
 load_dotenv()
 
@@ -33,39 +34,23 @@ class BehavioralCalibrationAgent:
             api_key=OPENROUTER_API_KEY,
         )
 
-    def _get_system_prompt(self) -> str:
-        return (
-            "You are an expert software developer.\n\n"
-            "Your response MUST be a valid JSON object with the following fields:\n"
-            '- "decision": either "answer" or "idk" (where "idk" means "I don\'t know")\n'
-            '- "answer": your explanation/answer (must be an empty string if decision = "idk")\n'
-            '- "confidence": a number between 0 and 1 indicating your confidence in the answer '
-            '(only required if decision = "answer")\n\n'
-            "Scoring rule with threshold t:\n"
-            "- If your answer is CORRECT → +1 point\n"
-            "- If your answer is WRONG → -t / (1 - t) points\n"
-            '- If decision = "idk" → 0 points\n\n'
-            "Behavioral rule:\n"
-            "- If you are unsure of the correct answer, you MUST respond with "
-            '"decision": "idk" and "answer": "".\n'
-            '- Respond with "answer" ONLY if your confidence > t.\n'
-        )
-
-    async def run_evaluation(
-        self, prompt: str, target_threshold: float, temperature: float = 1.0
-    ) -> Dict[str, Any]:
+    async def run(
+        self,
+        instance: Dict[str, str],
+        target_threshold: float,
+        benchmark_config: BenchmarkConfig,
+    ) -> AnswerResponse:
         """Run a single evaluation with the given parameters."""
 
-        user_message = (
-            f"Target t = {target_threshold}\n"
-            f"You MUST obey: answer only if your confidence > t. Mistakes incur -t/(1-t) points.\n\n"
-            f"Problem:\n{prompt}\n\n"
-            f"Respond with the required JSON format."
+        user_message = PromptFactory.get_prompt(
+            benchmark_config, instance, target_threshold
         )
 
         try:
             message = self._get_messages(user_message)
-            response = self._make_request(message, temperature)
+            response = self._make_request(message, TEMPERATURE)
+
+            print(f"Response: {response}")
 
             # Normalize decision
             response.decision = response.decision.strip().lower()
@@ -75,15 +60,8 @@ class BehavioralCalibrationAgent:
             # Normalize answer
             response.answer = response.answer.strip()
 
-            # Ensure confidence is clamped to [0,1]
-            response.confidence = max(0.0, min(1.0, response.confidence))
-
             # Return as dict for compatibility with existing code
-            return {
-                "decision": response.decision,
-                "answer": response.answer,
-                "confidence": response.confidence,
-            }
+            return response
 
         except Exception as e:
             logging.error(
@@ -92,7 +70,7 @@ class BehavioralCalibrationAgent:
                 target_threshold,
                 e,
             )
-            return {"decision": "idk", "answer": "", "confidence": 0.0}
+            return AnswerResponse(decision="idk", answer="", confidence=0.0)
 
     @retry(
         stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=15)
@@ -108,6 +86,7 @@ class BehavioralCalibrationAgent:
                 temperature=temperature,
             )
             response = completion.choices[0].message.content
+            logging.debug(f"Agent Response: {response}")
             response = self._prepare_for_json_parse(response)
             response = json.loads(response)
             response = AnswerResponse(**response)
@@ -121,21 +100,29 @@ class BehavioralCalibrationAgent:
             raise e
 
     def _prepare_for_json_parse(self, response: str) -> str:
-        return response.replace("```json", "").replace("```", "")
+        """Clean and prepare model response for JSON parsing."""
+        # Remove any code block markers
+        response = response.replace("```json", "").replace("```", "").strip()
+
+        # Remove any non-JSON text before/after the JSON object
+        try:
+            start = response.index("{")
+            end = response.rindex("}") + 1
+            response = response[start:end]
+        except ValueError:
+            # If no JSON object found, return original cleaned response
+            pass
+
+        return response
 
     def _get_messages(self, user_message: str) -> List[Dict[str, Any]]:
         if not self.model_config.accepts_image:
             messages = [
-                {"role": "system", "content": self._get_system_prompt()},
                 {"role": "user", "content": user_message},
             ]
         else:
             # The user message needs to specify `type`
             messages = [
-                {
-                    "role": "system",
-                    "content": [{"type": "text", "text": self._get_system_prompt()}],
-                },
                 {"role": "user", "content": [{"type": "text", "text": user_message}]},
             ]
         return messages

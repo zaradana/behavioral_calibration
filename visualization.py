@@ -5,7 +5,7 @@ from typing import Dict
 import matplotlib.pyplot as plt
 
 from config import OUTPUT_DIR
-from utils import get_logger
+from utils.core_utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -91,7 +91,7 @@ def plot_overlays(
     ax_incon.legend(fontsize=8)
 
     plt.tight_layout()
-    plt.show()
     os.makedirs(f"{OUTPUT_DIR}/plots", exist_ok=True)
     plt.savefig(f"{OUTPUT_DIR}/plots/{output_filename}.png")
+    plt.show()
     logger.info(f"Plots saved to {OUTPUT_DIR}/plots/{output_filename}.png")
