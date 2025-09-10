@@ -147,6 +147,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "black" },
+    { name = "huggingface-hub" },
     { name = "matplotlib" },
     { name = "openai" },
     { name = "pandas" },
@@ -167,6 +168,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "black", specifier = ">=25.1.0" },
+    { name = "huggingface-hub", specifier = ">=0.34.4" },
     { name = "matplotlib", specifier = ">=3.10.6" },
     { name = "openai", specifier = ">=1.107.0" },
     { name = "pandas", specifier = ">=2.3.2" },

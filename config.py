@@ -16,6 +16,7 @@ OUTPUT_DIR = "./output"
 LOGS_DIR = "./logs"
 OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+HF_HUB_TOKEN = os.getenv("HF_HUB_TOKEN")
 TEMPERATURE = 0.3  # for code generation we need a lower temperature
 ENV = os.getenv("ENV", "dev")
 # Behavioral calibration settings

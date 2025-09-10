@@ -43,6 +43,7 @@ class ModelConfig:
 class BenchmarkConfig:
     dataset_name: str
     dataset_path: str
+    config_name: str
     instance_id_key: str
     dataset_split: str = "test"
 

@@ -12,14 +12,22 @@ Benchmarks = {
         dataset_path="SWE-bench/SWE-bench_Lite",
         dataset_split="test",
         instance_id_key="instance_id",
+        config_name="",
     ),
     "proxy_data": BenchmarkConfig(
         dataset_name="proxy_data",
         dataset_path="",
         dataset_split="test",
         instance_id_key="id",
-    )
-
+        config_name="",
+    ),
+    "GPQA": BenchmarkConfig(
+        dataset_name="GPQA",
+        dataset_path="Idavidrein/gpqa",
+        dataset_split="train",
+        instance_id_key="id",
+        config_name="gpqa_diamond",
+    ),
 }
 
 def get_benchmark_config(name: str) -> BenchmarkConfig:

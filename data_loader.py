@@ -48,7 +48,7 @@ def get_data(benchmark_config: BenchmarkConfig) -> List[Dict[str, str]]:
         # Login using e.g. `huggingface-cli login` to access this dataset
         # Only load dataset if not using proxy data
         raw_dataset = load_dataset(
-            benchmark_config.dataset_path, split=benchmark_config.dataset_split
+            benchmark_config.dataset_path, split=benchmark_config.dataset_split, config_name=benchmark_config.config_name
         )
     except Exception as e:
         print(f"Warning: Failed to load dataset {benchmark_config.dataset_path}: {e}")
