@@ -34,13 +34,7 @@ repos:
       # Run the formatter.
       - id: ruff-format
 
-  # Since you already have black in dependencies, using it for Python formatting
-  - repo: https://github.com/psf/black
-    rev: 25.1.0
-    hooks:
-      - id: black
-        language_version: python3
-        exclude: ^(logs/.*|output/.*)$
+  # Removed black since ruff-format handles formatting
 
   # Python import sorting
   - repo: https://github.com/pycqa/isort
@@ -55,5 +49,5 @@ repos:
     rev: 1.7.10
     hooks:
       - id: bandit
-        args: ["-r", "-x", "logs,output"]
-        exclude: ^(logs/.*|output/.*)$
+        args: ["-r", "-x", "logs,output,tests"]
+        exclude: ^(logs/.*|output/.*|tests/.*)$

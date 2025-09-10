@@ -20,7 +20,7 @@ The scoring system incentivizes models to only answer when they are sufficiently
 ## Features
 
 - **Multi-benchmark Support**: Evaluate across SWE-bench, GPQA, and proxy tasks
-- **Multi-model evaluation**: Test different LLMs from OpenRouter  
+- **Multi-model evaluation**: Test different LLMs from OpenRouter
 - **Behavioral analysis**: Measure how well models follow confidence-based abstention rules
 - **Configurable thresholds**: Test different confidence thresholds
 - **Comprehensive metrics**: Coverage, accuracy, payoff, and consistency rates
@@ -32,13 +32,13 @@ The scoring system incentivizes models to only answer when they are sufficiently
 The evaluator pattern makes it easy to add new benchmark types:
 
 1. **Create evaluator**: Implement `BaseBenchmarkEvaluator` in `evaluations/`
-2. **Register evaluator**: Add to `EvaluatorFactory` 
+2. **Register evaluator**: Add to `EvaluatorFactory`
 3. **Add prompts**: Create prompt templates in `prompts/`
 4. **Configure**: Add benchmark config to `config.py`
 
 ### Adding New Models
 1. **Find model**: Find the model in the [OpenRouter](https://openrouter.ai/models) and get the model ID.
-2. **Create model config**: Create a model config in `models.py` and add it to the `MODELS` list. 
+2. **Create model config**: Create a model config in `models.py` and add it to the `MODELS` list.
 ```python
 ModelConfig(
     model_name="your-model",
@@ -63,7 +63,7 @@ ModelConfig(
 - **Metrics**: Binary correctness
 
 ### Proxy Tasks
-- **Task**: Simplified debugging problems  
+- **Task**: Simplified debugging problems
 - **Format**: String matching against expected outputs
 - **Evaluation**: Heuristic substring matching
 - **Metrics**: Binary correctness based on expected substrings
@@ -158,12 +158,12 @@ The evaluation reports several behavioral calibration metrics across all support
 
 #### Behavioral Metrics
 - **Acc_beh**: Accuracy on problems where the model chose to answer
-- **Cov_beh**: Coverage (fraction of problems the model attempted)  
+- **Cov_beh**: Coverage (fraction of problems the model attempted)
 - **Pay_beh**: Average payoff under the behavioral scoring rule
 - **IDK&High**: Inconsistency rate (said "IDK" but had high confidence)
 - **Ans&Low**: Inconsistency rate (answered but had low confidence)
 
-#### Benchmark-Specific Metrics  
+#### Benchmark-Specific Metrics
 - **SWE-bench**: Test pass/fail rates, patch application success
 - **GPQA**: Multiple-choice accuracy, answer extraction success
 - **Proxy**: Substring matching accuracy, heuristic evaluation
@@ -181,3 +181,4 @@ If you use this code in your research, please cite:
 ```bibtex
 [Add citation information if applicable]
 ```
+# Test change
