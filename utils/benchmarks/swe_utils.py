@@ -1,12 +1,12 @@
 import re
-
-from typing import List, Dict, Any, Union
-from schema import ItemEval
-import platform
 import os
+import platform
+from pathlib import Path
+from typing import List, Dict, Any, Union
+
+from schema import ItemEval
 from utils.core_utils import get_logger
 from swebench.harness.run_evaluation import main as run_swebench_evaluation
-from pathlib import Path
 
 logger = get_logger(__name__)
 
@@ -256,7 +256,7 @@ def prepare_swebench_predictions(
         if pred.decision == "answer" and pred.answer.strip():
             patch = answer_to_patch(pred.answer)
             swe_bench_predictions.append({
-                "instance_id": pred.item_id,
+                "instance_id": pred.evaluation_metadata["instance_id"],
                 "model_patch": patch,
                 "model_name_or_path": model_name
             })
@@ -316,3 +316,5 @@ def run_swebench_with_docker(
     except Exception as e:
         logger.error(f"SWE-bench evaluation failed: {e}")
         return None
+
+

@@ -1,8 +1,10 @@
 from typing import Dict, List
-
 from datasets import load_dataset
-
+from config import HF_HUB_TOKEN
 from schema import BenchmarkConfig
+from utils.core_utils import get_logger
+
+logger = get_logger(__name__)
 
 # SWE-style proxy problems (expand or swap for actual SWE-bench runner)
 raw_proxy_dataset = [
@@ -47,17 +49,19 @@ def get_data(benchmark_config: BenchmarkConfig) -> List[Dict[str, str]]:
     try:
         # Login using e.g. `huggingface-cli login` to access this dataset
         # Only load dataset if not using proxy data
+        if benchmark_config.dataset_name == "proxy_data":
+            return raw_proxy_dataset
+
         raw_dataset = load_dataset(
-            benchmark_config.dataset_path, split=benchmark_config.dataset_split, config_name=benchmark_config.config_name
+            benchmark_config.dataset_path,
+            benchmark_config.config_name,
+            split=benchmark_config.dataset_split,
+            token=HF_HUB_TOKEN,
         )
+        return list(raw_dataset)
     except Exception as e:
-        print(f"Warning: Failed to load dataset {benchmark_config.dataset_path}: {e}")
+        print(f"Warning: Failed to load dataset {benchmark_config.dataset_name}: {e}")
         print("Falling back to proxy data")
-        raw_dataset = None
-
-    # Use proxy data if explicitly requested or if dataset loading failed
-    if benchmark_config.dataset_name == "proxy_data" or raw_dataset is None:
-        return raw_proxy_dataset
-
+        return raw_proxy_dataset 
     # For SWE-bench and other HuggingFace datasets - convert to list
-    return list(raw_dataset)
+    

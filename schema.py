@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Any
 
 from pydantic import BaseModel, Field
 
@@ -16,11 +16,13 @@ class AnswerResponse(BaseModel):
     confidence: float = Field(
         default=0.0, ge=0.0, le=1.0, description="Confidence level between 0 and 1"
     )
+    evaluation_metadata: Optional[Dict] = Field(
+        default=None, description="Metadata needed for evaluation (e.g., correct_index)"
+    )
 
 
 @dataclass
 class ItemEval:
-    item_id: str
     decision: str  # "answer" or "idk"
     answer: str
     confidence: float
@@ -28,6 +30,7 @@ class ItemEval:
     payoff_behavioral: Optional[float] = (
         None  # payoff using decision as the abstention mechanism
     )
+    evaluation_metadata: Optional[Dict] = None  # Store processed instance metadata
 
 
 @dataclass
@@ -44,7 +47,6 @@ class BenchmarkConfig:
     dataset_name: str
     dataset_path: str
     config_name: str
-    instance_id_key: str
     dataset_split: str = "test"
 
 
@@ -84,3 +86,11 @@ class SWEBenchSummary:
     instances_resolved: int
     resolution_rate: float  # resolved / submitted
     completion_rate: float  # completed / submitted
+
+@dataclass
+class ProcessedInstance:
+    """Container for processed instance data with metadata."""
+    original_instance: Dict[str, Any]
+    prompt_data: Dict[str, Any]  # Data needed for prompt generation
+    evaluation_metadata: Dict[str, Any]  # Data needed for evaluation (e.g., correct_index)
+    

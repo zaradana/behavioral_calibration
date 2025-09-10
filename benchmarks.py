@@ -11,21 +11,18 @@ Benchmarks = {
         dataset_name="swe_bench_lite",
         dataset_path="SWE-bench/SWE-bench_Lite",
         dataset_split="test",
-        instance_id_key="instance_id",
         config_name="",
     ),
     "proxy_data": BenchmarkConfig(
         dataset_name="proxy_data",
         dataset_path="",
         dataset_split="test",
-        instance_id_key="id",
         config_name="",
     ),
-    "GPQA": BenchmarkConfig(
-        dataset_name="GPQA",
+    "gpqa": BenchmarkConfig(
+        dataset_name="gpqa",
         dataset_path="Idavidrein/gpqa",
         dataset_split="train",
-        instance_id_key="id",
         config_name="gpqa_diamond",
     ),
 }

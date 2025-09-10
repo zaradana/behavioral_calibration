@@ -1,14 +1,14 @@
 # Behavioral Calibration
 
-A research tool for evaluating the behavioral calibration of large language models on software engineering tasks. This project measures how well AI models can calibrate their confidence with their actual performance when asked to decide whether to answer or abstain from answering questions.
-
-**🆕 NEW: SWE-bench Integration** - Now includes integration with the official SWE-bench evaluation harness to validate model predictions against real-world software repositories. See [SWEBENCH_INTEGRATION.md](SWEBENCH_INTEGRATION.md) for details.
+A research tool for evaluating the behavioral calibration of large language models across multiple benchmarks. This project measures how well AI models can calibrate their confidence with their actual performance when asked to decide whether to answer or abstain from answering questions.
 
 ## Overview
 
-This tool implements a behavioral calibration experiment where AI models are given software debugging tasks and must decide whether to:
+This tool implements a behavioral calibration experiment where AI models are given tasks from various benchmarks and must decide whether to:
 - **Answer** with their solution and confidence level
 - **Abstain** by saying "I don't know"
+
+The system supports multiple benchmark types, each with specialized evaluation logic.
 
 The scoring system incentivizes models to only answer when they are sufficiently confident, based on a confidence threshold `t`.
 
@@ -19,13 +19,54 @@ The scoring system incentivizes models to only answer when they are sufficiently
 
 ## Features
 
-- **Multi-model evaluation**: Test different LLMs from OpenRouter
+- **Multi-benchmark Support**: Evaluate across SWE-bench, GPQA, and proxy tasks
+- **Multi-model evaluation**: Test different LLMs from OpenRouter  
 - **Behavioral analysis**: Measure how well models follow confidence-based abstention rules
 - **Configurable thresholds**: Test different confidence thresholds
 - **Comprehensive metrics**: Coverage, accuracy, payoff, and consistency rates
 - **Visualization**: Generate plots showing model behavior across thresholds
-- **🆕 SWE-bench Integration**: Validate patches using real repository tests
-- **Dual Evaluation**: Compare behavioral calibration with actual code fix success
+- **Extensible Architecture**: Easy to add new benchmark types
+
+### Adding New Benchmarks
+
+The evaluator pattern makes it easy to add new benchmark types:
+
+1. **Create evaluator**: Implement `BaseBenchmarkEvaluator` in `evaluations/`
+2. **Register evaluator**: Add to `EvaluatorFactory` 
+3. **Add prompts**: Create prompt templates in `prompts/`
+4. **Configure**: Add benchmark config to `config.py`
+
+### Adding New Models
+1. **Find model**: Find the model in the [OpenRouter](https://openrouter.ai/models) and get the model ID.
+2. **Create model config**: Create a model config in `models.py` and add it to the `MODELS` list. 
+```python
+ModelConfig(
+    model_name="your-model",
+    model_path="provider/model-id",
+    accepts_image=False,
+    is_free=True  # Set to False for paid models
+)
+```
+
+## Supported Benchmarks
+
+### SWE-bench
+- **Task**: Software engineering bug fixes
+- **Format**: Generate code patches to fix real GitHub issues
+- **Evaluation**: Patches tested against actual repository test suites using Docker
+- **Metrics**: Pass/fail based on test execution
+
+### GPQA
+- **Task**: Graduate-level physics questions
+- **Format**: Multiple choice (A, B, C, D)
+- **Evaluation**: Exact match against correct answer
+- **Metrics**: Binary correctness
+
+### Proxy Tasks
+- **Task**: Simplified debugging problems  
+- **Format**: String matching against expected outputs
+- **Evaluation**: Heuristic substring matching
+- **Metrics**: Binary correctness based on expected substrings
 
 ## Installation
 
@@ -51,27 +92,17 @@ The scoring system incentivizes models to only answer when they are sufficiently
    ```bash
    # Required: OpenRouter API key for model access
    OPENROUTER_API_KEY=your_api_key_here
+   HF_HUB_TOKEN=your_token_here
    ENV=dev
    ```
+   Note: `HF_HUB_TOKEN` is only need for the gated benchmarks like GPQA.
+
 
    **For macOS users with Docker Desktop**: The Docker socket path is automatically configured. If you encounter Docker connection issues, ensure Docker Desktop is running.
 
    **For Linux users**: Ensure your user is in the `docker` group and Docker daemon is running.
 
-4. **Hugging Face authentication** (for SWE-bench dataset)
-   ```bash
-   uv run huggingface-cli login
-   ```
 
-## Create SWE-bench dataset
-```bash
-uv run python -m swebench.inference.make_datasets.create_text_dataset \
-    --dataset_name_or_path SWE-bench/SWE-bench_Lite \
-    --output_dir ./output \
-    --prompt_style style-2 \
-    --file_source oracle \
-    --splits dev test
-```
 
 ## Usage
 
@@ -99,13 +130,19 @@ ModelConfig(
 
 **Confidence Thresholds**: Modify the `TARGETS` list
 ```python
-TARGETS = [0.5, 0.7, 0.9]  # Confidence thresholds to test
+CONFIDENCE_TARGETS = [0.0, 0.5, 0.8]  # Confidence thresholds to test
 ```
 
-**Dataset Mode**: Toggle between real SWE-bench data and proxy problems
+**Benchmark Selection**: Choose which benchmarks to evaluate
 ```python
-DEV_MODE = True   # Use proxy data for testing
-DEV_MODE = False  # Use full SWE-bench dataset
+# Configure benchmark in config.py
+BENCHMARK = get_benchmark_config("gpqa") # or "swe_bench_lite", "proxy_data"
+```
+
+**Environment Mode**: Changes the logging level.
+```python
+ENV = "dev"   # Use DEBUG level logging
+ENV = "prod"  # Use INFO level logging
 ```
 
 ### Output
@@ -117,13 +154,21 @@ Results are saved to the `output/` directory:
 
 ### Key Metrics
 
-The evaluation reports several behavioral calibration metrics:
+The evaluation reports several behavioral calibration metrics across all supported benchmarks:
 
+#### Behavioral Metrics
 - **Acc_beh**: Accuracy on problems where the model chose to answer
-- **Cov_beh**: Coverage (fraction of problems the model attempted)
+- **Cov_beh**: Coverage (fraction of problems the model attempted)  
 - **Pay_beh**: Average payoff under the behavioral scoring rule
 - **IDK&High**: Inconsistency rate (said "IDK" but had high confidence)
 - **Ans&Low**: Inconsistency rate (answered but had low confidence)
+
+#### Benchmark-Specific Metrics  
+- **SWE-bench**: Test pass/fail rates, patch application success
+- **GPQA**: Multiple-choice accuracy, answer extraction success
+- **Proxy**: Substring matching accuracy, heuristic evaluation
+
+All metrics are computed consistently across benchmarks using the evaluator pattern.
 
 ## License
 

@@ -10,14 +10,14 @@ load_dotenv()
 # Benchmark configuration - easily configurable
 # Option 1: Use environment variables (current approach)
 BENCHMARK = get_benchmark_config(
-    "swe_bench_lite"
-)  # or "swe-bench_Lite", "proxy_data", etc.
+    "gpqa"
+)  
 OUTPUT_DIR = "./output"
 LOGS_DIR = "./logs"
 OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 HF_HUB_TOKEN = os.getenv("HF_HUB_TOKEN")
-TEMPERATURE = 0.3  # for code generation we need a lower temperature
+TEMPERATURE = 1  # 0.3 for swe and 1 for other benchmarks
 ENV = os.getenv("ENV", "dev")
 # Behavioral calibration settings
 CONFIDENCE_TARGETS = [0.0, 0.5, 0.8]  # 0 is to be used for simulating IDK

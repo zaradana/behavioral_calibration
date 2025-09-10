@@ -52,7 +52,6 @@ def save_model_results(
             output.append(
                 {
                     "target_confidence": t,
-                    "item_id": item_val.item_id,
                     "decision": item_val.decision,
                     "answer": item_val.answer,
                     "confidence": item_val.confidence,

@@ -35,17 +35,17 @@ async def get_predictions(
         obj = await agent.run(item, confidence_threshold, BENCHMARK)
         predictions.append(
             ItemEval(
-                item_id=item[BENCHMARK.instance_id_key],
                 decision=obj.decision,
                 answer=obj.answer,
                 confidence=obj.confidence,
+                evaluation_metadata=obj.evaluation_metadata,
             )
         )
     return predictions
 
 
 async def main():
-    data = get_data(benchmark_config=BENCHMARK)[3:4]
+    data = get_data(benchmark_config=BENCHMARK)
 
     agg_results_by_model: Dict[str, Dict[float, Dict[str, float]]] = {}
     output = []

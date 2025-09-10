@@ -10,6 +10,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from config import OPENROUTER_BASE_URL, TEMPERATURE
 from prompts.prompt_factory import PromptFactory
 from schema import AnswerResponse, BenchmarkConfig, ModelConfig
+from utils.instance_processor import get_instance_processor
 
 load_dotenv()
 
@@ -41,9 +42,13 @@ class BehavioralCalibrationAgent:
         benchmark_config: BenchmarkConfig,
     ) -> AnswerResponse:
         """Run a single evaluation with the given parameters."""
-
+        
+        # Process the instance to extract prompt data and evaluation metadata
+        processor = get_instance_processor(benchmark_config)
+        processed_instance = processor.process(instance)
+    
         user_message = PromptFactory.get_prompt(
-            benchmark_config, instance, target_threshold
+            benchmark_config, processed_instance, target_threshold
         )
 
         try:
@@ -59,6 +64,9 @@ class BehavioralCalibrationAgent:
 
             # Normalize answer
             response.answer = response.answer.strip()
+
+            # Add evaluation metadata to the response for later use
+            response.evaluation_metadata = processed_instance.evaluation_metadata
 
             # Return as dict for compatibility with existing code
             return response
