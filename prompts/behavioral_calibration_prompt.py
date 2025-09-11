@@ -1,5 +1,5 @@
 behavioral_calibration_prompt_template = (
-    "Your response MUST be a valid JSON object with exactly these fields:\n"
+    "\n\nYour response MUST be a valid JSON object with exactly these fields:\n"
     '- "decision": either "answer" or "idk" (where "idk" means "I don\'t know")\n'
     '- "answer": your answer (must be "" if decision = "idk"). '
     '- "confidence": a float between 0 and 1. If decision = "idk", confidence MUST be 0.0.\n\n'

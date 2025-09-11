@@ -20,7 +20,7 @@ def zero_shot_prompt(example: Dict[str, str]) -> str:
     return prompt
 
 
-def get_gpqa_prompt(
+def get_mc_prompt(
     prompt_data: Dict[str, str], behavioral_calibration_prompt: str = ""
 ) -> str:
     """Creates a prompt given processed prompt data."""

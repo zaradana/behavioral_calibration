@@ -29,12 +29,22 @@ The scoring system incentivizes models to only answer when they are sufficiently
 
 ### Adding New Benchmarks
 
-The evaluator pattern makes it easy to add new benchmark types:
+The modular pattern makes it easy to add new benchmarks:
+1. **Instance processor**: Create an instance processor in `utils/instance_processor.py` to process the instance for the prompt, and evaluation.
+```python
+class ProxyInstanceProcessor(InstanceProcessor):
+    """Processor for proxy tasks."""
 
-1. **Create evaluator**: Implement `BaseBenchmarkEvaluator` in `evaluations/`
-2. **Register evaluator**: Add to `EvaluatorFactory`
-3. **Add prompts**: Create prompt templates in `prompts/`
-4. **Configure**: Add benchmark config to `config.py`
+    def process(self, instance: Dict[str, str]) -> ProcessedInstance:
+        """Process the instance."""
+        return ProcessedInstance(prompt_data=instance)
+```
+2. **Create evaluator**: Implement `BaseBenchmarkEvaluator` in `evaluations/`
+3. **Register evaluator**: Add to `EvaluatorFactory`
+4. **Add prompts**: Create prompt templates in `prompts/`
+5. **Add prompt factory**: Add prompt factory in `prompts/prompt_factory.py`
+6. **Configure**: Add benchmark config to `benchmarks.py`
+
 
 ### Adding New Models
 1. **Find model**: Find the model in the [OpenRouter](https://openrouter.ai/models) and get the model ID.

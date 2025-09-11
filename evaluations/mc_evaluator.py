@@ -1,15 +1,18 @@
-"""GPQA benchmark evaluator."""
+"""Multiple choice benchmark evaluator."""
 
 import re
 from typing import List
 
 from schema import ItemEval
+from utils.core_utils import get_logger
 from utils.evaluation_utils import payoff_value
 
 from .base_evaluator import BaseBenchmarkEvaluator
 
+logger = get_logger(__name__)
 
-def extract_gpqa_answer(response_text: str) -> str:
+
+def extract_mc_answer(response_text: str) -> str:
     """Extract the answer choice (A, B, C, D) from the model response."""
     if not response_text:
         return ""
@@ -37,9 +40,9 @@ def extract_gpqa_answer(response_text: str) -> str:
     return ""  # No answer found
 
 
-def evaluate_gpqa_answer(predicted_answer: str, correct_index: int) -> bool:
+def evaluate_mc_answer(predicted_answer: str, correct_index: int) -> bool:
     """Evaluate if the predicted answer matches the correct index."""
-    if not predicted_answer:
+    if not predicted_answer or not correct_index:
         return False
 
     # Convert correct_index (0-3) to letter (A-D)
@@ -49,8 +52,8 @@ def evaluate_gpqa_answer(predicted_answer: str, correct_index: int) -> bool:
     return predicted_answer.upper() == correct_letter
 
 
-class GPQAEvaluator(BaseBenchmarkEvaluator):
-    """Evaluator for GPQA benchmark tasks."""
+class MCEvaluator(BaseBenchmarkEvaluator):
+    """Evaluator for multiple choice benchmark tasks."""
 
     async def evaluate_predictions(
         self,
@@ -59,13 +62,13 @@ class GPQAEvaluator(BaseBenchmarkEvaluator):
         model_name: str,
         filename_id: str,
     ) -> List[ItemEval]:
-        """Evaluate GPQA predictions by extracting and comparing answer choices."""
+        """Evaluate MC predictions by extracting and comparing answer choices."""
         outputs: List[ItemEval] = []
 
         for pred in predictions:
-            extracted_answer = extract_gpqa_answer(pred.answer)
+            extracted_answer = extract_mc_answer(pred.answer)
             correct_index = pred.evaluation_metadata.get("correct_index")
-            is_correct = evaluate_gpqa_answer(extracted_answer, correct_index)
+            is_correct = evaluate_mc_answer(extracted_answer, correct_index)
             pay = payoff_value(is_correct, pred.decision, confidence_threshold)
             outputs.append(
                 ItemEval(

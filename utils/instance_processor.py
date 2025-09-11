@@ -94,7 +94,30 @@ class ProxyInstanceProcessor(InstanceProcessor):
         prompt_data = instance.copy()  # Proxy data can be used as-is for prompts
 
         evaluation_metadata = {
-            "id": instance.get("id", ""),
+            "expect_substrings": instance.get("expect_substrings", []),
+        }
+
+        return ProcessedInstance(
+            original_instance=instance,
+            prompt_data=prompt_data,
+            evaluation_metadata=evaluation_metadata,
+        )
+
+
+class TruthfulQAInstanceProcessor(InstanceProcessor):
+    """Processor for TruthfulQA instances."""
+
+    def process(self, instance: Dict[str, Any]) -> ProcessedInstance:
+        """Process TruthfulQA instance."""
+        prompt_data = {
+            "question": instance.get("question", ""),
+            "choice1": instance["choices"][0],
+            "choice2": instance["choices"][1],
+            "choice3": instance["choices"][2],
+            "choice4": instance["choices"][3],
+        }
+        evaluation_metadata = {
+            "correct_index": instance.get("label", ""),
         }
 
         return ProcessedInstance(
@@ -110,6 +133,8 @@ def get_instance_processor(benchmark_config: BenchmarkConfig) -> InstanceProcess
         return GPQAInstanceProcessor()
     elif "swe" in benchmark_config.dataset_name.lower():
         return SWEInstanceProcessor()
+    elif "truthfulqa" in benchmark_config.dataset_name.lower():
+        return TruthfulQAInstanceProcessor()
     else:
         # Default to proxy processor for unknown datasets
         return ProxyInstanceProcessor()

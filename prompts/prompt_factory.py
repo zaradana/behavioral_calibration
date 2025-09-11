@@ -1,5 +1,5 @@
 from prompts.behavioral_calibration_prompt import behavioral_calibration_prompt_template
-from prompts.gpqa_prompt import get_gpqa_prompt
+from prompts.mc_prompt import get_mc_prompt
 from prompts.proxy_prompt import get_proxy_prompt
 from prompts.swe_prompt import prompt_style_2 as get_swe_prompt
 from schema import BenchmarkConfig
@@ -16,17 +16,27 @@ class PromptFactory:
         behavioral_calibration_prompt = behavioral_calibration_prompt_template.format(
             target_threshold=target_threshold
         )
+        prompt_registry = {
+            "swe": get_swe_prompt,
+            "gpqa": get_mc_prompt,
+            "truthfulqa": get_mc_prompt,
+            "proxy": get_proxy_prompt,
+        }
 
-        if "swe" in benchmark_config.dataset_name.lower():
-            return get_swe_prompt(
+        dataset_name = benchmark_config.dataset_name.lower()
+
+        # Try exact match first
+        if dataset_name in prompt_registry:
+            return prompt_registry[dataset_name](
                 processed_instance.prompt_data, behavioral_calibration_prompt
             )
-        elif "gpqa" in benchmark_config.dataset_name.lower():
-            return get_gpqa_prompt(
-                processed_instance.prompt_data, behavioral_calibration_prompt
-            )
-        else:
-            # For other datasets, default to proxy style prompt
-            return get_proxy_prompt(
-                processed_instance.prompt_data, behavioral_calibration_prompt
-            )
+
+        # Try partial matches for SWE-bench variants
+        for pattern, prompt_func in prompt_registry.items():
+            if pattern in dataset_name:
+                return prompt_func(
+                    processed_instance.prompt_data, behavioral_calibration_prompt
+                )
+        raise ValueError(
+            f"No prompt found for benchmark {benchmark_config.dataset_name}"
+        )

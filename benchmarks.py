@@ -25,6 +25,12 @@ Benchmarks = {
         dataset_split="train",
         config_name="gpqa_diamond",
     ),
+    "truthfulqa": BenchmarkConfig(
+        dataset_name="truthfulqa",
+        dataset_path="EleutherAI/truthful_qa_mc",
+        dataset_split="validation",
+        config_name="",
+    ),
 }
 
 

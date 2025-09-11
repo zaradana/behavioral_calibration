@@ -50,6 +50,11 @@ async def main():
         agent = get_agent(model_config)
         evaluation_results: Dict[float, List[ItemEval]] = {}
         for confidence_threshold in CONFIDENCE_TARGETS:
+            logger.info(
+                "Getting predictions for %s with confidence threshold %s",
+                model_name,
+                confidence_threshold,
+            )
             predictions: List[ItemEval] = await get_predictions(
                 data, agent, confidence_threshold
             )

@@ -2,8 +2,7 @@
 
 from typing import List
 
-from data_loader import get_data
-from schema import BenchmarkConfig, ItemEval
+from schema import ItemEval
 from utils.evaluation_utils import payoff_value
 
 from .base_evaluator import BaseBenchmarkEvaluator
@@ -11,10 +10,6 @@ from .base_evaluator import BaseBenchmarkEvaluator
 
 class ProxyEvaluator(BaseBenchmarkEvaluator):
     """Evaluator for proxy benchmark tasks."""
-
-    def __init__(self, benchmark_config: BenchmarkConfig):
-        super().__init__(benchmark_config)
-        self.raw_dataset = get_data(benchmark_config=benchmark_config)
 
     async def evaluate_predictions(
         self,
@@ -28,7 +23,9 @@ class ProxyEvaluator(BaseBenchmarkEvaluator):
 
         for pred in predictions:
             is_correct = (
-                self._correctness_heuristic(pred.answer, pred.evaluation_metadata["id"])
+                self._correctness_heuristic(
+                    pred.answer, pred.evaluation_metadata["expect_substrings"]
+                )
                 if pred.decision == "answer"
                 else False
             )
@@ -46,12 +43,7 @@ class ProxyEvaluator(BaseBenchmarkEvaluator):
 
         return outputs
 
-    def _correctness_heuristic(self, answer: str, item_id: str) -> bool:
+    def _correctness_heuristic(self, answer: str, expect_substrings: List[str]) -> bool:
         """Simple heuristic to check if an answer contains expected substrings."""
         a = (answer or "").lower()
-        expect_substrings = next(
-            item["expect_substrings"]
-            for item in self.raw_dataset
-            if item["id"] == item_id
-        )
         return all(s in a for s in (s.lower() for s in expect_substrings))

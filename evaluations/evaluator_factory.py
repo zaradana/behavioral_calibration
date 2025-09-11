@@ -5,7 +5,7 @@ from typing import Dict, Type
 from schema import BenchmarkConfig
 
 from .base_evaluator import BaseBenchmarkEvaluator
-from .gpqa_evaluator import GPQAEvaluator
+from .mc_evaluator import MCEvaluator
 from .proxy_evaluator import ProxyEvaluator
 from .swe_evaluator import SWEEvaluator
 
@@ -16,7 +16,8 @@ class EvaluatorFactory:
     # Registry mapping dataset names to evaluator classes
     _evaluator_registry: Dict[str, Type[BaseBenchmarkEvaluator]] = {
         "proxy_data": ProxyEvaluator,
-        "gpqa": GPQAEvaluator,
+        "gpqa": MCEvaluator,
+        "truthfulqa": MCEvaluator,
         "swe": SWEEvaluator,
     }
 
