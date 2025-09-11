@@ -8,7 +8,8 @@ class AnswerResponse(BaseModel):
     """Response model for SWE diagnostic evaluations."""
 
     decision: Literal["answer", "idk"] = Field(
-        default="idk", description="Whether to provide an answer or say 'I don't know'"
+        default="answer",
+        description="Whether to provide an answer or say 'I don't know'",
     )
     answer: str = Field(
         default="", description="The answer (empty if decision is 'idk')"
@@ -19,10 +20,12 @@ class AnswerResponse(BaseModel):
     evaluation_metadata: Optional[Dict] = Field(
         default=None, description="Metadata needed for evaluation (e.g., correct_index)"
     )
+    id: int = Field(default=0, description="The ID of the instance")
 
 
 @dataclass
 class ItemEval:
+    id: int
     decision: str  # "answer" or "idk"
     answer: str
     confidence: float
@@ -93,6 +96,7 @@ class SWEBenchSummary:
 class ProcessedInstance:
     """Container for processed instance data with metadata."""
 
+    id: int
     original_instance: Dict[str, Any]
     prompt_data: Dict[str, Any]  # Data needed for prompt generation
     evaluation_metadata: Dict[

@@ -18,17 +18,17 @@ def plot_overlays(
       (A) Accuracy vs t (two curves): behavioral vs confidence-only
       (B) Coverage vs t (two curves): behavioral vs confidence-only
       (C) Avg payoff vs t (behavioral only)
-      (D) Inconsistency vs t (stacked: idk_high_conf, answer_low_conf)
+      (D) Average confidence by correctness (correct vs incorrect answers)
     """
     _, axes = plt.subplots(2, 2, figsize=(14, 10))
-    ax_acc, ax_cov, ax_pay, ax_incon = axes.flatten()
+    ax_acc, ax_cov, ax_pay, ax_conf = axes.flatten()
 
     for model, by_t in results_by_model.items():
         ts = sorted(by_t.keys())
 
         # Collect series
         acc_beh, cov_beh, pay_beh = [], [], []
-        incon_idk_high, incon_ans_low = [], []
+        conf_correct, conf_incorrect = [], []
 
         for t in ts:
             row = by_t[t]
@@ -40,8 +40,23 @@ def plot_overlays(
             cov_beh.append(row["cov_b"])
             pay_beh.append(row["pay_b"])
 
-            incon_idk_high.append(row["idk_high_conf"])
-            incon_ans_low.append(row["answer_low_conf"])
+            # Handle NaN values for confidence metrics
+            conf_correct.append(
+                None
+                if (
+                    isinstance(row["avg_conf_correct"], float)
+                    and math.isnan(row["avg_conf_correct"])
+                )
+                else row["avg_conf_correct"]
+            )
+            conf_incorrect.append(
+                None
+                if (
+                    isinstance(row["avg_conf_incorrect"], float)
+                    and math.isnan(row["avg_conf_incorrect"])
+                )
+                else row["avg_conf_incorrect"]
+            )
 
         # Drop NaNs for plotting accuracies
         ts_acc_beh = [t for t, a in zip(ts, acc_beh) if a is not None]
@@ -56,14 +71,26 @@ def plot_overlays(
         # (C) Payoff (behavioral)
         ax_pay.plot(ts, pay_beh, marker="^", label=model)
 
-        # (D) Inconsistency (stacked bars per model would be cluttered; lines instead)
-        ax_incon.plot(ts, incon_idk_high, marker="d", label=f"{model} — IDK&conf>t")
-        ax_incon.plot(
-            ts,
-            incon_ans_low,
-            marker="d",
+        # (D) Confidence by correctness
+        # Filter out NaN values for plotting
+        ts_conf_correct = [t for t, c in zip(ts, conf_correct) if c is not None]
+        conf_correct_pl = [c for c in conf_correct if c is not None]
+
+        ts_conf_incorrect = [t for t, c in zip(ts, conf_incorrect) if c is not None]
+        conf_incorrect_pl = [c for c in conf_incorrect if c is not None]
+
+        ax_conf.plot(
+            ts_conf_correct,
+            conf_correct_pl,
+            marker="o",
+            label=f"{model} — Correct answers",
+        )
+        ax_conf.plot(
+            ts_conf_incorrect,
+            conf_incorrect_pl,
+            marker="s",
             linestyle="--",
-            label=f"{model} — ANSWER&conf<t",
+            label=f"{model} — Incorrect answers",
         )
 
     ax_acc.set_title("Accuracy vs Target t")
@@ -84,11 +111,12 @@ def plot_overlays(
     ax_pay.grid(True)
     ax_pay.legend(fontsize=8)
 
-    ax_incon.set_title("Inconsistency vs Target t")
-    ax_incon.set_xlabel("t")
-    ax_incon.set_ylabel("Fraction of items")
-    ax_incon.grid(True)
-    ax_incon.legend(fontsize=8)
+    ax_conf.set_title("Average Confidence by Correctness")
+    ax_conf.set_xlabel("Target Confidence Threshold (t)")
+    ax_conf.set_ylabel("Average Confidence")
+    ax_conf.grid(True)
+    ax_conf.legend(fontsize=8)
+    ax_conf.set_ylim(0, 1)  # Confidence is between 0 and 1
 
     plt.tight_layout()
     os.makedirs(f"{OUTPUT_DIR}/plots", exist_ok=True)

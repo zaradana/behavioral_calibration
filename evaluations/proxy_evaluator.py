@@ -32,6 +32,7 @@ class ProxyEvaluator(BaseBenchmarkEvaluator):
             pay = payoff_value(is_correct, pred.decision, confidence_threshold)
             outputs.append(
                 ItemEval(
+                    id=pred.id,
                     decision=pred.decision,
                     answer=pred.answer,
                     confidence=pred.confidence,

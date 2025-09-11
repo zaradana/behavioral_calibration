@@ -14,6 +14,12 @@ MODELS = [
         is_free=False,
     ),
     ModelConfig(
+        model_name="gpt-4o-mini",
+        model_path="openai/gpt-4o-mini",
+        accepts_image=False,
+        is_free=False,
+    ),
+    ModelConfig(
         model_name="deepseek-r1",
         model_path="deepseek/deepseek-r1",
         accepts_image=False,
@@ -66,6 +72,24 @@ MODELS = [
         model_path="deepseek/deepseek-chat-v3.1:free",
         accepts_image=False,
         is_free=True,
+    ),
+    ModelConfig(
+        model_name="gemini-2.0-flash-001",
+        model_path="google/gemini-2.0-flash-001",
+        accepts_image=False,
+        is_free=False,
+    ),
+    ModelConfig(
+        model_name="qwen3-235b-a22b-2507",
+        model_path="qwen/qwen3-235b-a22b-2507",
+        accepts_image=False,
+        is_free=False,
+    ),
+    ModelConfig(
+        model_name="llama-3.2-3b-instruct",
+        model_path="meta-llama/llama-3.2-3b-instruct",
+        accepts_image=False,
+        is_free=False,
     ),
 ]
 

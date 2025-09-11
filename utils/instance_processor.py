@@ -1,12 +1,26 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from schema import BenchmarkConfig, ProcessedInstance
+from utils.core_utils import get_logger
+
+logger = get_logger(__name__)
 
 
 class InstanceProcessor(ABC):
     """Base class for processing benchmark instances."""
+
+    def __init__(self):
+        """Initialize the instance processor with its own ID counter."""
+        # Each instance gets its own counter starting from 1
+        self.id = 0
+
+    def _get_next_id(self) -> int:
+        """Get the next ID using this instance's atomic increment."""
+        self.id += 1
+        logger.info(f"Instance ID: {self.id}")
+        return self.id
 
     @abstractmethod
     def process(self, instance: Dict[str, Any]) -> ProcessedInstance:
@@ -17,10 +31,8 @@ class InstanceProcessor(ABC):
 class GPQAInstanceProcessor(InstanceProcessor):
     """Processor for GPQA instances that handles answer shuffling."""
 
-    def __init__(self, seed: Optional[int] = None):
-        self.seed = seed
-        if seed is not None:
-            random.seed(seed)
+    def __init__(self):
+        super().__init__()
 
     def process(self, instance: Dict[str, Any]) -> ProcessedInstance:
         """Process GPQA instance by shuffling answers and tracking correct index."""
@@ -32,20 +44,13 @@ class GPQAInstanceProcessor(InstanceProcessor):
             instance["Correct Answer"],
         ]
 
-        # Set seed for reproducible shuffling per instance if provided
-        if self.seed is not None:
-            # Use instance-specific seed for reproducibility
-            instance_seed = hash(instance.get("Question", "")) % (2**32)
-            random.seed(self.seed + instance_seed)
-
+        # Use current timestamp + instance-specific data as seed for true randomness
+        seed = hash(str(instance))
+        random.seed(seed)
         random.shuffle(example_choices)
 
         # Find the correct answer index after shuffling
         correct_index = example_choices.index(instance["Correct Answer"])
-
-        # Restore global seed state if we were using instance-specific seeding
-        if self.seed is not None:
-            random.seed(self.seed)
 
         prompt_data = {
             "question": instance["Question"],
@@ -57,15 +62,23 @@ class GPQAInstanceProcessor(InstanceProcessor):
 
         evaluation_metadata = {"correct_index": correct_index}
 
-        return ProcessedInstance(
+        # Create ProcessedInstance with placeholder ID first to avoid blocking
+        result = ProcessedInstance(
+            id=0,  # Temporary placeholder
             original_instance=instance,
             prompt_data=prompt_data,
             evaluation_metadata=evaluation_metadata,
         )
+        # Assign the actual ID after creation to minimize lock contention
+        result.id = self._get_next_id()
+        return result
 
 
 class SWEInstanceProcessor(InstanceProcessor):
     """Processor for SWE-bench instances."""
+
+    def __init__(self):
+        super().__init__()
 
     def process(self, instance: Dict[str, Any]) -> ProcessedInstance:
         """Process SWE instance - mostly pass-through since no shuffling needed."""
@@ -79,15 +92,23 @@ class SWEInstanceProcessor(InstanceProcessor):
             "instance_id": instance.get("instance_id", ""),
         }
 
-        return ProcessedInstance(
+        # Create ProcessedInstance with placeholder ID first to avoid blocking
+        result = ProcessedInstance(
+            id=0,  # Temporary placeholder
             original_instance=instance,
             prompt_data=prompt_data,
             evaluation_metadata=evaluation_metadata,
         )
+        # Assign the actual ID after creation to minimize lock contention
+        result.id = self._get_next_id()
+        return result
 
 
 class ProxyInstanceProcessor(InstanceProcessor):
     """Processor for proxy data instances."""
+
+    def __init__(self):
+        super().__init__()
 
     def process(self, instance: Dict[str, Any]) -> ProcessedInstance:
         """Process proxy instance - mostly pass-through."""
@@ -97,15 +118,23 @@ class ProxyInstanceProcessor(InstanceProcessor):
             "expect_substrings": instance.get("expect_substrings", []),
         }
 
-        return ProcessedInstance(
+        # Create ProcessedInstance with placeholder ID first to avoid blocking
+        result = ProcessedInstance(
+            id=0,  # Temporary placeholder
             original_instance=instance,
             prompt_data=prompt_data,
             evaluation_metadata=evaluation_metadata,
         )
+        # Assign the actual ID after creation to minimize lock contention
+        result.id = self._get_next_id()
+        return result
 
 
 class TruthfulQAInstanceProcessor(InstanceProcessor):
     """Processor for TruthfulQA instances."""
+
+    def __init__(self):
+        super().__init__()
 
     def process(self, instance: Dict[str, Any]) -> ProcessedInstance:
         """Process TruthfulQA instance."""
@@ -120,15 +149,23 @@ class TruthfulQAInstanceProcessor(InstanceProcessor):
             "correct_index": instance.get("label", ""),
         }
 
-        return ProcessedInstance(
+        # Create ProcessedInstance with placeholder ID first to avoid blocking
+        result = ProcessedInstance(
+            id=0,  # Temporary placeholder
             original_instance=instance,
             prompt_data=prompt_data,
             evaluation_metadata=evaluation_metadata,
         )
+        # Assign the actual ID after creation to minimize lock contention
+        result.id = self._get_next_id()
+        return result
 
 
 class GSM8KInstanceProcessor(InstanceProcessor):
     """Processor for GSM8K instances."""
+
+    def __init__(self):
+        super().__init__()
 
     def process(self, instance: Dict[str, Any]) -> ProcessedInstance:
         """Process GSM8K instance to extract problem and answer."""
@@ -147,15 +184,23 @@ class GSM8KInstanceProcessor(InstanceProcessor):
             "answer": numeric_answer,
         }
 
-        return ProcessedInstance(
+        # Create ProcessedInstance with placeholder ID first to avoid blocking
+        result = ProcessedInstance(
+            id=0,  # Temporary placeholder
             original_instance=instance,
             prompt_data=prompt_data,
             evaluation_metadata=evaluation_metadata,
         )
+        # Assign the actual ID after creation to minimize lock contention
+        result.id = self._get_next_id()
+        return result
 
 
 class SVAMPInstanceProcessor(InstanceProcessor):
     """Processor for SVAMP instances."""
+
+    def __init__(self):
+        super().__init__()
 
     def process(self, instance: Dict[str, Any]) -> ProcessedInstance:
         """Process SVAMP instance using question_concat and Answer columns."""
@@ -168,25 +213,39 @@ class SVAMPInstanceProcessor(InstanceProcessor):
             "answer": answer,
         }
 
-        return ProcessedInstance(
+        # Create ProcessedInstance with placeholder ID first to avoid blocking
+        result = ProcessedInstance(
+            id=0,  # Temporary placeholder
             original_instance=instance,
             prompt_data=prompt_data,
             evaluation_metadata=evaluation_metadata,
         )
+        # Assign the actual ID after creation to minimize lock contention
+        result.id = self._get_next_id()
+        return result
 
 
 def get_instance_processor(benchmark_config: BenchmarkConfig) -> InstanceProcessor:
-    """Get the appropriate instance processor for the given dataset."""
-    if "gpqa" in benchmark_config.dataset_name.lower():
-        return GPQAInstanceProcessor()
-    elif "swe" in benchmark_config.dataset_name.lower():
-        return SWEInstanceProcessor()
-    elif "truthfulqa" in benchmark_config.dataset_name.lower():
-        return TruthfulQAInstanceProcessor()
-    elif "gsm8k" in benchmark_config.dataset_name.lower():
-        return GSM8KInstanceProcessor()
-    elif "svamp" in benchmark_config.dataset_name.lower():
-        return SVAMPInstanceProcessor()
+    """Get a new instance processor for the given dataset.
+
+    Returns a new instance each time so each agent gets its own processor
+    with independent ID counting starting from 1.
+    """
+    dataset_key = benchmark_config.dataset_name.lower()
+
+    # Create new processor instance each time
+    if "gpqa" in dataset_key:
+        processor = GPQAInstanceProcessor()
+    elif "swe" in dataset_key:
+        processor = SWEInstanceProcessor()
+    elif "truthfulqa" in dataset_key:
+        processor = TruthfulQAInstanceProcessor()
+    elif "gsm8k" in dataset_key:
+        processor = GSM8KInstanceProcessor()
+    elif "svamp" in dataset_key:
+        processor = SVAMPInstanceProcessor()
     else:
         # Default to proxy processor for unknown datasets
-        return ProxyInstanceProcessor()
+        processor = ProxyInstanceProcessor()
+
+    return processor

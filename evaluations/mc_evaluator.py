@@ -17,10 +17,10 @@ def extract_mc_answer(response_text: str) -> str:
     if not response_text:
         return ""
 
-    # Look for patterns like "The correct answer is (A)" or just "(A)" or "A"
+    # Look for patterns like "The correct answer is (A)" or "(A) some text" or just "(A)" or "A"
     patterns = [
         r"answer is \(([ABCD])\)",
-        r"\(([ABCD])\)",
+        r"\(([ABCD])\).*",  # Match (A) followed by any text
         r"^([ABCD])$",  # Just a single letter
         r"answer is ([ABCD])",  # Without parentheses
     ]

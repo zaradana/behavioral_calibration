@@ -120,6 +120,7 @@ class SVAMPEvaluator(BaseBenchmarkEvaluator):
 
             outputs.append(
                 ItemEval(
+                    id=pred.id,
                     decision=pred.decision,
                     answer=pred.answer,
                     confidence=pred.confidence,

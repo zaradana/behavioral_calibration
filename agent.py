@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import before_sleep_log, retry, stop_after_attempt, wait_exponential
 
 from config import OPENROUTER_BASE_URL, TEMPERATURE
 from prompts.prompt_factory import PromptFactory
@@ -13,6 +13,84 @@ from schema import AnswerResponse, BenchmarkConfig, ModelConfig
 from utils.instance_processor import get_instance_processor
 
 load_dotenv()
+
+
+def is_rate_limit_error(exception):
+    """Check if exception is a rate limiting error."""
+    if exception is None:
+        return False
+
+    try:
+        error_str = str(exception).lower()
+
+        # Check common rate limiting indicators
+        rate_limit_indicators = [
+            "rate_limit",
+            "rate limit",
+            "ratelimit",
+            "too many requests",
+            "quota",
+            "throttl",
+        ]
+
+        # Check error message
+        for indicator in rate_limit_indicators:
+            if indicator in error_str:
+                return True
+
+        # Check status codes
+        if "429" in str(exception):
+            return True
+
+        # Check status_code attribute (OpenAI and similar APIs)
+        if hasattr(exception, "status_code") and exception.status_code == 429:
+            return True
+
+        # Check response attribute (some APIs nest the status code)
+        if hasattr(exception, "response") and hasattr(
+            exception.response, "status_code"
+        ):
+            if exception.response.status_code == 429:
+                return True
+
+        # Check for OpenAI specific rate limit exceptions
+        if exception.__class__.__name__ in ["RateLimitError", "APIError"]:
+            return True
+
+        return False
+
+    except Exception:
+        # If anything goes wrong in detection, assume it's not rate limiting
+        # This prevents the detection logic itself from breaking
+        return False
+
+
+def should_retry_rate_limiting(retry_state):
+    """Custom retry condition: only retry on rate limiting errors."""
+    if not retry_state.outcome or not retry_state.outcome.failed:
+        # This shouldn't happen - tenacity only calls this after failures
+        return False
+
+    exception = retry_state.outcome.exception()
+    is_rate_limit = is_rate_limit_error(exception)
+    logging.info(
+        f"Rate limiting strategy: exception={exception}, is_rate_limit={is_rate_limit}"
+    )
+    return is_rate_limit
+
+
+def should_retry_general(retry_state):
+    """Custom retry condition: only retry on non-rate-limiting errors."""
+    if not retry_state.outcome or not retry_state.outcome.failed:
+        # This shouldn't happen - tenacity only calls this after failures
+        return False
+
+    exception = retry_state.outcome.exception()
+    is_rate_limit = is_rate_limit_error(exception)
+    logging.info(
+        f"General strategy: exception={exception}, is_rate_limit={is_rate_limit}"
+    )
+    return not is_rate_limit
 
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -26,29 +104,35 @@ os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY
 class BehavioralCalibrationAgent:
     """PydanticAI agent for behavioral calibration experiments."""
 
-    def __init__(self, model_config: ModelConfig, max_retries: int = 4):
+    def __init__(
+        self,
+        model_config: ModelConfig,
+        benchmark_config: BenchmarkConfig,
+        max_retries: int = 4,
+    ):
         # Configure OpenAI model to work with OpenRouter
         self.max_retries = max_retries
         self.model_config = model_config
+        self.benchmark_config = benchmark_config
         self.client = AsyncOpenAI(
             base_url=OPENROUTER_BASE_URL,
             api_key=OPENROUTER_API_KEY,
         )
+        # Create a persistent processor for this agent instance
+        self.processor = get_instance_processor(benchmark_config)
 
     async def run(
         self,
         instance: Dict[str, str],
         target_threshold: float,
-        benchmark_config: BenchmarkConfig,
     ) -> AnswerResponse:
         """Run a single evaluation with the given parameters."""
 
         # Process the instance to extract prompt data and evaluation metadata
-        processor = get_instance_processor(benchmark_config)
-        processed_instance = processor.process(instance)
+        processed_instance = self.processor.process(instance)
 
         user_message = PromptFactory.get_prompt(
-            benchmark_config, processed_instance, target_threshold
+            self.benchmark_config, processed_instance, target_threshold
         )
 
         try:
@@ -65,53 +149,150 @@ class BehavioralCalibrationAgent:
 
             # Add evaluation metadata to the response for later use
             response.evaluation_metadata = processed_instance.evaluation_metadata
+            response.id = processed_instance.id
 
             # Return as dict for compatibility with existing code
             return response
 
         except Exception as e:
             logging.error(
-                "Final failure for %s @ t=%.2f. Returning IDK. Err: %s",
+                "Final failure for %s @ t=%.2f. Returning empty answer. Err: %s",
                 self.model_config.model_name,
                 target_threshold,
                 e,
             )
             return AnswerResponse(
-                decision="idk",
+                id=processed_instance.id,
+                decision="answer",  # the idk should be reserved for when the model is sure that it doesn't know the answer
                 answer="",
                 confidence=0.0,
                 evaluation_metadata=processed_instance.evaluation_metadata,
             )
 
+    async def _make_single_request(
+        self, messages: List[Dict[str, Any]], temperature: float
+    ) -> AnswerResponse:
+        """Make a single API request without any retry logic."""
+        completion = await self.client.chat.completions.create(
+            extra_body={},
+            model=self.model_config.model_path,
+            messages=messages,
+            temperature=temperature,
+        )
+        response = completion.choices[0].message.content
+        logging.debug(f"Agent Response: {response}")
+
+        try:
+            cleaned_response = self._prepare_for_json_parse(response)
+            parsed_json = json.loads(cleaned_response)
+
+            # Convert answer to string if it's not already (models sometimes return numbers)
+            if "answer" in parsed_json and not isinstance(parsed_json["answer"], str):
+                parsed_json["answer"] = str(parsed_json["answer"])
+                logging.info(
+                    f"Converted answer from {type(parsed_json['answer'])} to string"
+                )
+
+            answer_response = AnswerResponse(**parsed_json)
+            return answer_response
+        except json.JSONDecodeError as e:
+            logging.error(f"JSON parsing failed: {e}")
+            logging.error(
+                f"Cleaned response that failed to parse: {repr(cleaned_response)}"
+            )
+            raise
+        except Exception as e:
+            logging.error(f"AnswerResponse creation failed: {e}")
+            logging.error(f"Parsed JSON: {parsed_json}")
+            raise
+
     @retry(
-        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=15)
+        # For general API errors: shorter exponential backoff (2s, 4s, 8s)
+        # Retry on any exception EXCEPT rate limiting (those should use rate limiting strategy)
+        retry=should_retry_general,
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(
+            multiplier=2, min=2, max=16
+        ),  # 2s, 4s, 8s (capped at 16s)
+        before_sleep=before_sleep_log(logging, logging.WARNING),
     )
+    async def _make_general_request(
+        self, messages: List[Dict[str, Any]], temperature: float
+    ) -> AnswerResponse:
+        """Make API request with general error handling - used after first attempt fails with non-rate-limit error."""
+        return await self._make_single_request(messages, temperature)
+
+    @retry(
+        # For rate limiting errors: longer exponential backoff (5s, 10s, 20s, 40s)
+        # Only retry on rate limiting errors - other errors should not use this strategy
+        retry=should_retry_rate_limiting,
+        stop=stop_after_attempt(4),
+        wait=wait_exponential(
+            multiplier=5, min=5, max=60
+        ),  # 5s, 10s, 20s, 40s (capped at 60s)
+        before_sleep=before_sleep_log(logging, logging.WARNING),
+    )
+    async def _make_rate_limited_request(
+        self, messages: List[Dict[str, Any]], temperature: float
+    ) -> AnswerResponse:
+        """Make API request with longer backoff for rate limiting - tenacity handles retries."""
+        return await self._make_single_request(messages, temperature)
+
     async def _make_request(
         self, messages: List[Dict[str, Any]], temperature: float
     ) -> AnswerResponse:
+        """Make API request with intelligent retry strategy that adapts to error types."""
+
+        # First attempt - no retry, just detect error type
         try:
-            completion = await self.client.chat.completions.create(
-                extra_body={},
-                model=self.model_config.model_path,
-                messages=messages,
-                temperature=temperature,
-            )
-            response = completion.choices[0].message.content
-            logging.debug(f"Agent Response: {response}")
-            response = self._prepare_for_json_parse(response)
-            response = json.loads(response)
-            response = AnswerResponse(**response)
-            return response
-
-        except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-            logging.error(f"Error making request: {e} {traceback.format_exc()}")
-            raise e
+            return await self._make_single_request(messages, temperature)
+        except Exception as first_error:
+            if is_rate_limit_error(first_error):
+                # Rate limited on first try → use rate limiting strategy
+                logging.info(
+                    "Rate limiting detected on first attempt, using rate limiting strategy"
+                )
+                try:
+                    return await self._make_rate_limited_request(messages, temperature)
+                except Exception as rate_limit_strategy_error:
+                    # If rate limiting strategy encounters non-rate-limit error, try general strategy
+                    if not is_rate_limit_error(rate_limit_strategy_error):
+                        logging.info(
+                            "Rate limiting strategy encountered non-rate-limit error, switching to general strategy"
+                        )
+                        return await self._make_general_request(messages, temperature)
+                    else:
+                        # Still rate limiting error after rate limiting strategy
+                        logging.error(
+                            f"Rate limiting persists after all retries {rate_limit_strategy_error}."
+                        )
+                        raise rate_limit_strategy_error
+            else:
+                # Other error on first try → use general strategy
+                logging.info(
+                    f"General error detected on first attempt ({first_error}), using general strategy"
+                )
+                try:
+                    return await self._make_general_request(messages, temperature)
+                except Exception as general_strategy_error:
+                    # If general strategy encounters rate-limit error, try rate limiting strategy
+                    if is_rate_limit_error(general_strategy_error):
+                        logging.info(
+                            "General strategy encountered rate limiting, switching to rate limiting strategy"
+                        )
+                        return await self._make_rate_limited_request(
+                            messages, temperature
+                        )
+                    else:
+                        # Still general error after general strategy∂
+                        logging.error(
+                            f"General errors persist after all retries {general_strategy_error}."
+                        )
+                        raise general_strategy_error
 
     def _prepare_for_json_parse(self, response: str) -> str:
         """Clean and prepare model response for JSON parsing."""
+
         # Remove any code block markers
         response = response.replace("```json", "").replace("```", "").strip()
 
@@ -119,12 +300,14 @@ class BehavioralCalibrationAgent:
         try:
             start = response.index("{")
             end = response.rindex("}") + 1
-            response = response[start:end]
-        except ValueError:
-            # If no JSON object found, return original cleaned response
-            pass
-
-        return response
+            json_part = response[start:end]
+            logging.debug(f"Extracted JSON: {json_part}")
+            return json_part
+        except ValueError as e:
+            # If no JSON object found, log and return original cleaned response
+            logging.warning(f"No JSON object found in response. ValueError: {e}")
+            logging.warning(f"Response content: {repr(response)}")
+            return response
 
     def _get_messages(self, user_message: str) -> List[Dict[str, Any]]:
         if not self.model_config.accepts_image:
@@ -143,9 +326,11 @@ class BehavioralCalibrationAgent:
 _agent_instance = None
 
 
-def get_agent(model_config: ModelConfig) -> BehavioralCalibrationAgent:
+def get_agent(
+    model_config: ModelConfig, benchmark_config: BenchmarkConfig
+) -> BehavioralCalibrationAgent:
     """Get the global agent instance, creating it if necessary."""
     global _agent_instance
     if _agent_instance is None or _agent_instance.model_config != model_config:
-        _agent_instance = BehavioralCalibrationAgent(model_config)
+        _agent_instance = BehavioralCalibrationAgent(model_config, benchmark_config)
     return _agent_instance

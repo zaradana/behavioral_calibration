@@ -20,6 +20,33 @@ def summarize_behavioral(rows: List[ItemEval]) -> Tuple[float, float, float]:
     return acc, cov, avg_pay
 
 
+def confidence_by_correctness(rows: List[ItemEval]) -> Dict[str, float]:
+    """
+    Calculate average confidence scores for answered questions by correctness:
+      - avg_conf_correct: average confidence when decision=='answer' and correct=True
+      - avg_conf_incorrect: average confidence when decision=='answer' and correct=False
+    """
+    answered_correct = [r for r in rows if r.decision == "answer" and r.correct]
+    answered_incorrect = [r for r in rows if r.decision == "answer" and not r.correct]
+
+    avg_conf_correct = (
+        sum(r.confidence for r in answered_correct) / len(answered_correct)
+        if answered_correct
+        else float("nan")
+    )
+
+    avg_conf_incorrect = (
+        sum(r.confidence for r in answered_incorrect) / len(answered_incorrect)
+        if answered_incorrect
+        else float("nan")
+    )
+
+    return {
+        "avg_conf_correct": avg_conf_correct,
+        "avg_conf_incorrect": avg_conf_incorrect,
+    }
+
+
 def inconsistency_rates(rows: List[ItemEval], t: float) -> Dict[str, float]:
     """
     Measures disagreement between channels at target t:

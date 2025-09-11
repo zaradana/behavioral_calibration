@@ -31,14 +31,6 @@ The scoring system incentivizes models to only answer when they are sufficiently
 
 The modular pattern makes it easy to add new benchmarks:
 1. **Instance processor**: Create an instance processor in `utils/instance_processor.py` to process the instance for the prompt, and evaluation.
-```python
-class ProxyInstanceProcessor(InstanceProcessor):
-    """Processor for proxy tasks."""
-
-    def process(self, instance: Dict[str, str]) -> ProcessedInstance:
-        """Process the instance."""
-        return ProcessedInstance(prompt_data=instance)
-```
 2. **Create evaluator**: Implement `BaseBenchmarkEvaluator` in `evaluations/`
 3. **Register evaluator**: Add to `EvaluatorFactory`
 4. **Add prompts**: Create prompt templates in `prompts/`

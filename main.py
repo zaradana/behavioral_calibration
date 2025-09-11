@@ -13,7 +13,7 @@ from data_loader import get_data
 from evaluation import evaluate_model
 from schema import ConfigSchema, ItemEval
 from utils.core_utils import get_logger, save_model_results
-from utils.evaluation_utils import inconsistency_rates, summarize_behavioral
+from utils.evaluation_utils import confidence_by_correctness, summarize_behavioral
 from visualization import plot_overlays
 
 logger = get_logger(__name__)
@@ -27,9 +27,10 @@ async def get_predictions(
     """Get predictions for all data items sequentially (to avoid overwhelming the API)."""
     predictions: List[ItemEval] = []
     for item in data:
-        obj = await agent.run(item, confidence_threshold, BENCHMARK)
+        obj = await agent.run(item, confidence_threshold)
         predictions.append(
             ItemEval(
+                id=obj.id,
                 decision=obj.decision,
                 answer=obj.answer,
                 confidence=obj.confidence,
@@ -54,7 +55,7 @@ async def process_confidence_threshold(
         model_name,
         confidence_threshold,
     )
-    # data = list(data)[:10] # for testing
+    # data = list(data)[:5] # for testing
     predictions: List[ItemEval] = await get_predictions(
         data, agent, confidence_threshold
     )
@@ -105,7 +106,7 @@ async def main():
         tasks = [
             process_confidence_threshold(
                 data,
-                BehavioralCalibrationAgent(model_config),
+                BehavioralCalibrationAgent(model_config, BENCHMARK),
                 confidence_threshold,
                 model_name,
                 filename_id,
@@ -137,11 +138,13 @@ async def main():
         agg_results_by_model[model_name] = {}
 
         logger.info(f"\nModel: {model_name}")
-        logger.info("t\t\tAcc_beh\t\tCov_beh\t\tPay_beh\t\tIDK&High\tAns&Low")
+        logger.info(
+            "t\t\tAcc_beh\t\tCov_beh\t\tPay_beh\t\tConf_Correct\tConf_Incorrect"
+        )
         for confidence_threshold in sorted(evaluation_results.keys()):
             rows = evaluation_results[confidence_threshold]
             acc_b, cov_b, pay_b = summarize_behavioral(rows)
-            incon = inconsistency_rates(rows, confidence_threshold)
+            conf_metrics = confidence_by_correctness(rows)
 
             acc_b_str = (
                 "NaN"
@@ -149,9 +152,27 @@ async def main():
                 else f"{acc_b:.3f}"
             )
 
+            # Format confidence metrics
+            conf_correct_str = (
+                "NaN"
+                if (
+                    isinstance(conf_metrics["avg_conf_correct"], float)
+                    and math.isnan(conf_metrics["avg_conf_correct"])
+                )
+                else f"{conf_metrics['avg_conf_correct']:.3f}"
+            )
+            conf_incorrect_str = (
+                "NaN"
+                if (
+                    isinstance(conf_metrics["avg_conf_incorrect"], float)
+                    and math.isnan(conf_metrics["avg_conf_incorrect"])
+                )
+                else f"{conf_metrics['avg_conf_incorrect']:.3f}"
+            )
+
             logger.info(
                 f"{confidence_threshold:.2f}\t{acc_b_str}\t\t{cov_b:.3f}\t\t{pay_b:.3f}\t\t"
-                f"{incon['idk_high_conf']:.3f}\t\t{incon['answer_low_conf']:.3f}"
+                f"{conf_correct_str}\t\t{conf_incorrect_str}"
             )
             output.append(
                 {
@@ -160,8 +181,8 @@ async def main():
                     "acc_b": acc_b,
                     "cov_b": cov_b,
                     "pay_b": pay_b,
-                    "idk_high_conf": incon["idk_high_conf"],
-                    "answer_low_conf": incon["answer_low_conf"],
+                    "avg_conf_correct": conf_metrics["avg_conf_correct"],
+                    "avg_conf_incorrect": conf_metrics["avg_conf_incorrect"],
                 }
             )
 
@@ -169,8 +190,8 @@ async def main():
                 "acc_b": acc_b,
                 "cov_b": cov_b,
                 "pay_b": pay_b,
-                "idk_high_conf": incon["idk_high_conf"],
-                "answer_low_conf": incon["answer_low_conf"],
+                "avg_conf_correct": conf_metrics["avg_conf_correct"],
+                "avg_conf_incorrect": conf_metrics["avg_conf_incorrect"],
             }
 
     file_path = f"{OUTPUT_DIR}/aggregated/aggregated_results_{filename_id}.csv"
