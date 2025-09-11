@@ -4,7 +4,7 @@ import os
 from typing import Any, Dict, List
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import AsyncOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from config import OPENROUTER_BASE_URL, TEMPERATURE
@@ -30,7 +30,7 @@ class BehavioralCalibrationAgent:
         # Configure OpenAI model to work with OpenRouter
         self.max_retries = max_retries
         self.model_config = model_config
-        self.client = OpenAI(
+        self.client = AsyncOpenAI(
             base_url=OPENROUTER_BASE_URL,
             api_key=OPENROUTER_API_KEY,
         )
@@ -53,7 +53,7 @@ class BehavioralCalibrationAgent:
 
         try:
             message = self._get_messages(user_message)
-            response = self._make_request(message, TEMPERATURE)
+            response = await self._make_request(message, TEMPERATURE)
 
             # Normalize decision
             response.decision = response.decision.strip().lower()
@@ -86,11 +86,11 @@ class BehavioralCalibrationAgent:
     @retry(
         stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=15)
     )
-    def _make_request(
+    async def _make_request(
         self, messages: List[Dict[str, Any]], temperature: float
     ) -> AnswerResponse:
         try:
-            completion = self.client.chat.completions.create(
+            completion = await self.client.chat.completions.create(
                 extra_body={},
                 model=self.model_config.model_path,
                 messages=messages,

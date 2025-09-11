@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
-from agent import BehavioralCalibrationAgent, get_agent
+from agent import BehavioralCalibrationAgent
 from config import BENCHMARK, CONFIDENCE_TARGETS, MODELS, OUTPUT_DIR, TEMPERATURE
 from data_loader import get_data
 from evaluation import evaluate_model
@@ -24,6 +24,7 @@ async def get_predictions(
     agent: BehavioralCalibrationAgent,
     confidence_threshold: float,
 ) -> List[ItemEval]:
+    """Get predictions for all data items sequentially (to avoid overwhelming the API)."""
     predictions: List[ItemEval] = []
     for item in data:
         obj = await agent.run(item, confidence_threshold, BENCHMARK)
@@ -38,6 +39,46 @@ async def get_predictions(
     return predictions
 
 
+async def process_confidence_threshold(
+    data: List[Dict[str, Any]],
+    agent: BehavioralCalibrationAgent,
+    confidence_threshold: float,
+    model_name: str,
+    filename_id: str,
+) -> tuple[float, List[ItemEval]]:
+    """Process a single confidence threshold and return results."""
+    start_time = datetime.now()
+    logger.info(
+        "[%s] Getting predictions for %s with confidence threshold %s",
+        start_time.strftime("%H:%M:%S.%f")[:-3],
+        model_name,
+        confidence_threshold,
+    )
+    # data = list(data)[:10] # for testing
+    predictions: List[ItemEval] = await get_predictions(
+        data, agent, confidence_threshold
+    )
+
+    eval_start_time = datetime.now()
+    logger.info(
+        "[%s] Evaluating %s with threshold %s...",
+        eval_start_time.strftime("%H:%M:%S.%f")[:-3],
+        model_name,
+        confidence_threshold,
+    )
+
+    # Run evaluation with optional SWE-bench integration
+    evaluation_results = await evaluate_model(
+        predictions=predictions,
+        benchmark_config=BENCHMARK,
+        confidence_threshold=confidence_threshold,
+        model_name=model_name,
+        filename_id=filename_id,
+    )
+
+    return confidence_threshold, evaluation_results
+
+
 async def main():
     data = get_data(benchmark_config=BENCHMARK)
 
@@ -47,28 +88,45 @@ async def main():
 
     for model_config in MODELS:
         model_name = model_config.model_name
-        agent = get_agent(model_config)
-        evaluation_results: Dict[float, List[ItemEval]] = {}
-        for confidence_threshold in CONFIDENCE_TARGETS:
-            logger.info(
-                "Getting predictions for %s with confidence threshold %s",
-                model_name,
+
+        logger.info(
+            "Processing all confidence thresholds concurrently for %s", model_name
+        )
+
+        # Add timing to see what's happening
+        overall_start = datetime.now()
+        logger.info(
+            "[%s] Starting all threshold tasks",
+            overall_start.strftime("%H:%M:%S.%f")[:-3],
+        )
+
+        # Process all confidence thresholds concurrently
+        # Create separate agent instances to avoid shared connection/state issues
+        tasks = [
+            process_confidence_threshold(
+                data,
+                BehavioralCalibrationAgent(model_config),
                 confidence_threshold,
+                model_name,
+                filename_id,
             )
-            predictions: List[ItemEval] = await get_predictions(
-                data, agent, confidence_threshold
-            )
+            for confidence_threshold in CONFIDENCE_TARGETS
+        ]
 
-            logger.info("Evaluating %s ...", model_name)
+        # Wait for all tasks to complete
+        threshold_results = await asyncio.gather(*tasks)
 
-            # Run evaluation with optional SWE-bench integration
-            evaluation_results[confidence_threshold] = await evaluate_model(
-                predictions=predictions,
-                benchmark_config=BENCHMARK,
-                confidence_threshold=confidence_threshold,
-                model_name=model_name,
-                filename_id=filename_id,
-            )
+        overall_end = datetime.now()
+        logger.info(
+            "[%s] All threshold tasks completed in %.2f seconds",
+            overall_end.strftime("%H:%M:%S.%f")[:-3],
+            (overall_end - overall_start).total_seconds(),
+        )
+
+        # Convert results back to the expected format
+        evaluation_results: Dict[float, List[ItemEval]] = {}
+        for confidence_threshold, results in threshold_results:
+            evaluation_results[confidence_threshold] = results
 
         file_path = (
             f"{OUTPUT_DIR}/{model_name}/{model_name}_predictions_{filename_id}.csv"
