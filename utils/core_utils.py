@@ -48,7 +48,9 @@ def get_logger(name: str):
 
 
 def save_model_results(
-    results: Dict[str, Dict[float, List[ItemEval]]], output_filename: str
+    results: Dict[str, Dict[float, List[ItemEval]]],
+    output_filename: str,
+    benchmark_name: str,
 ) -> None:
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)
     output = []
@@ -56,6 +58,7 @@ def save_model_results(
         for item_val in item_vals:
             output.append(
                 {
+                    "benchmark": benchmark_name,
                     "id": item_val.id,
                     "target_confidence": t,
                     "decision": item_val.decision,

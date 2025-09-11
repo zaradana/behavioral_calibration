@@ -9,7 +9,7 @@ load_dotenv()
 
 # Benchmark configuration - easily configurable
 # Option 1: Use environment variables (current approach)
-BENCHMARK = get_benchmark_config("svamp")
+BENCHMARK = get_benchmark_config("gpqa")
 OUTPUT_DIR = "./output"
 LOGS_DIR = "./logs"
 OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")

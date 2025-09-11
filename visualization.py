@@ -11,7 +11,9 @@ logger = get_logger(__name__)
 
 
 def plot_overlays(
-    results_by_model: Dict[str, Dict[float, Dict[str, float]]], output_filename: str
+    results_by_model: Dict[str, Dict[float, Dict[str, float]]],
+    output_filename: str,
+    benchmark_name: str,
 ) -> None:
     """
     Plots:
@@ -93,25 +95,25 @@ def plot_overlays(
             label=f"{model} — Incorrect answers",
         )
 
-    ax_acc.set_title("Accuracy vs Target t")
+    ax_acc.set_title("Accuracy vs Target t ({benchmark_name})")
     ax_acc.set_xlabel("t")
     ax_acc.set_ylabel("Accuracy (answered only)")
     ax_acc.grid(True)
     ax_acc.legend(fontsize=8)
 
-    ax_cov.set_title("Coverage vs Target t")
+    ax_cov.set_title("Coverage vs Target t ({benchmark_name})")
     ax_cov.set_xlabel("t")
     ax_cov.set_ylabel("Coverage (fraction answered)")
     ax_cov.grid(True)
     ax_cov.legend(fontsize=8)
 
-    ax_pay.set_title("Average Payoff vs Target t (Behavioral)")
+    ax_pay.set_title("Average Payoff vs Target t (Behavioral) ({benchmark_name})")
     ax_pay.set_xlabel("t")
     ax_pay.set_ylabel("Avg Payoff per Item")
     ax_pay.grid(True)
     ax_pay.legend(fontsize=8)
 
-    ax_conf.set_title("Average Confidence by Correctness")
+    ax_conf.set_title("Average Confidence by Correctness ({benchmark_name})")
     ax_conf.set_xlabel("Target Confidence Threshold (t)")
     ax_conf.set_ylabel("Average Confidence")
     ax_conf.grid(True)

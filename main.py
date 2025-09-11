@@ -132,7 +132,7 @@ async def main():
         file_path = (
             f"{OUTPUT_DIR}/{model_name}/{model_name}_predictions_{filename_id}.csv"
         )
-        save_model_results(evaluation_results, file_path)
+        save_model_results(evaluation_results, file_path, BENCHMARK.dataset_name)
         logger.info("Results saved to %s", file_path)
 
         agg_results_by_model[model_name] = {}
@@ -176,6 +176,7 @@ async def main():
             )
             output.append(
                 {
+                    "benchmark": BENCHMARK.dataset_name,
                     "model": model_name,
                     "target_confidence": confidence_threshold,
                     "acc_b": acc_b,
@@ -213,7 +214,7 @@ async def main():
         json.dump(config.model_dump(), f, indent=4, default=str)
     logger.info("Config saved to %s", config_json_path)
 
-    plot_overlays(agg_results_by_model, filename_id)
+    plot_overlays(agg_results_by_model, filename_id, BENCHMARK.dataset_name)
 
 
 if __name__ == "__main__":
