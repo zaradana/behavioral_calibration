@@ -27,7 +27,7 @@ def inconsistency_rates(rows: List[ItemEval], t: float) -> Dict[str, float]:
       - ans_low_conf:  fraction with decision=='answer' but confidence < t
     """
     n = len(rows) or 1
-    idk_high = sum(1 for r in rows if r.decision == "idk" and r.confidence >= t) / n
+    idk_high = sum(1 for r in rows if r.decision == "idk" and r.confidence > t) / n
     ans_low = sum(1 for r in rows if r.decision == "answer" and r.confidence < t) / n
     return {"idk_high_conf": idk_high, "answer_low_conf": ans_low}
 

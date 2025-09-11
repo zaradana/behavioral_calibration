@@ -31,6 +31,18 @@ Benchmarks = {
         dataset_split="validation",
         config_name="",
     ),
+    "gsm8k": BenchmarkConfig(
+        dataset_name="gsm8k",
+        dataset_path="openai/gsm8k",
+        dataset_split="test",
+        config_name="main",
+    ),
+    "svamp": BenchmarkConfig(
+        dataset_name="svamp",
+        dataset_path="ChilleD/SVAMP",
+        dataset_split="test",
+        config_name="",
+    ),
 }
 
 

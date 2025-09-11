@@ -127,6 +127,54 @@ class TruthfulQAInstanceProcessor(InstanceProcessor):
         )
 
 
+class GSM8KInstanceProcessor(InstanceProcessor):
+    """Processor for GSM8K instances."""
+
+    def process(self, instance: Dict[str, Any]) -> ProcessedInstance:
+        """Process GSM8K instance to extract problem and answer."""
+        question = instance.get("question", "")
+        answer = instance.get("answer", "")
+
+        # Extract the final numeric answer from the solution
+        # GSM8K answers are in format like "#### 42"
+        numeric_answer = ""
+        if "####" in answer:
+            numeric_answer = answer.split("####")[-1].strip()
+
+        prompt_data = {"problem": question}
+
+        evaluation_metadata = {
+            "answer": numeric_answer,
+        }
+
+        return ProcessedInstance(
+            original_instance=instance,
+            prompt_data=prompt_data,
+            evaluation_metadata=evaluation_metadata,
+        )
+
+
+class SVAMPInstanceProcessor(InstanceProcessor):
+    """Processor for SVAMP instances."""
+
+    def process(self, instance: Dict[str, Any]) -> ProcessedInstance:
+        """Process SVAMP instance using question_concat and Answer columns."""
+        # SVAMP columns: ID, Body, Question, Equation, Answer, Type, question_concat
+        question_concat = instance.get("question_concat", "")
+        answer = instance.get("Answer", "")
+        prompt_data = {"question_concat": question_concat}
+
+        evaluation_metadata = {
+            "answer": answer,
+        }
+
+        return ProcessedInstance(
+            original_instance=instance,
+            prompt_data=prompt_data,
+            evaluation_metadata=evaluation_metadata,
+        )
+
+
 def get_instance_processor(benchmark_config: BenchmarkConfig) -> InstanceProcessor:
     """Get the appropriate instance processor for the given dataset."""
     if "gpqa" in benchmark_config.dataset_name.lower():
@@ -135,6 +183,10 @@ def get_instance_processor(benchmark_config: BenchmarkConfig) -> InstanceProcess
         return SWEInstanceProcessor()
     elif "truthfulqa" in benchmark_config.dataset_name.lower():
         return TruthfulQAInstanceProcessor()
+    elif "gsm8k" in benchmark_config.dataset_name.lower():
+        return GSM8KInstanceProcessor()
+    elif "svamp" in benchmark_config.dataset_name.lower():
+        return SVAMPInstanceProcessor()
     else:
         # Default to proxy processor for unknown datasets
         return ProxyInstanceProcessor()

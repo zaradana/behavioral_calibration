@@ -5,8 +5,10 @@ from typing import Dict, Type
 from schema import BenchmarkConfig
 
 from .base_evaluator import BaseBenchmarkEvaluator
+from .gsm8k_evaluator import GSM8KEvaluator
 from .mc_evaluator import MCEvaluator
 from .proxy_evaluator import ProxyEvaluator
+from .svamp_evaluator import SVAMPEvaluator
 from .swe_evaluator import SWEEvaluator
 
 
@@ -19,6 +21,8 @@ class EvaluatorFactory:
         "gpqa": MCEvaluator,
         "truthfulqa": MCEvaluator,
         "swe": SWEEvaluator,
+        "gsm8k": GSM8KEvaluator,
+        "svamp": SVAMPEvaluator,
     }
 
     @classmethod

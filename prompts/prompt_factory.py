@@ -1,6 +1,8 @@
 from prompts.behavioral_calibration_prompt import behavioral_calibration_prompt_template
+from prompts.gsm8k_prompt import get_gsm8k_prompt
 from prompts.mc_prompt import get_mc_prompt
 from prompts.proxy_prompt import get_proxy_prompt
+from prompts.svamp_prompt import get_svamp_prompt
 from prompts.swe_prompt import prompt_style_2 as get_swe_prompt
 from schema import BenchmarkConfig
 from utils.instance_processor import ProcessedInstance
@@ -21,6 +23,8 @@ class PromptFactory:
             "gpqa": get_mc_prompt,
             "truthfulqa": get_mc_prompt,
             "proxy": get_proxy_prompt,
+            "gsm8k": get_gsm8k_prompt,
+            "svamp": get_svamp_prompt,
         }
 
         dataset_name = benchmark_config.dataset_name.lower()

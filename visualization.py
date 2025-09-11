@@ -57,7 +57,7 @@ def plot_overlays(
         ax_pay.plot(ts, pay_beh, marker="^", label=model)
 
         # (D) Inconsistency (stacked bars per model would be cluttered; lines instead)
-        ax_incon.plot(ts, incon_idk_high, marker="d", label=f"{model} — IDK&conf≥t")
+        ax_incon.plot(ts, incon_idk_high, marker="d", label=f"{model} — IDK&conf>t")
         ax_incon.plot(
             ts,
             incon_ans_low,

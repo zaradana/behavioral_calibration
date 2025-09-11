@@ -78,6 +78,18 @@ ModelConfig(
 - **Evaluation**: Heuristic substring matching
 - **Metrics**: Binary correctness based on expected substrings
 
+### GSM8K
+- **Task**: Math problems
+- **Format**: Textual answer
+- **Evaluation**: Exact match against correct answer
+- **Metrics**: Binary correctness
+
+### SVAMP
+- **Task**: Math problems
+- **Format**: Textual answer
+- **Evaluation**: Exact match against correct answer
+- **Metrics**: Binary correctness
+
 ## Installation
 
 ### Prerequisites

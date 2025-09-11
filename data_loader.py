@@ -1,6 +1,4 @@
-from typing import Dict, List
-
-from datasets import load_dataset
+from datasets import IterableDataset, load_dataset
 
 from config import HF_HUB_TOKEN
 from schema import BenchmarkConfig
@@ -9,7 +7,7 @@ from utils.core_utils import get_logger
 logger = get_logger(__name__)
 
 # SWE-style proxy problems (expand or swap for actual SWE-bench runner)
-raw_proxy_dataset = [
+proxy_data = [
     {
         "id": "bug-001",
         "prompt": (
@@ -39,7 +37,17 @@ raw_proxy_dataset = [
 ]
 
 
-def get_data(benchmark_config: BenchmarkConfig) -> List[Dict[str, str]]:
+# Create a generator function for the IterableDataset
+def proxy_data_generator():
+    for item in proxy_data:
+        yield item
+
+
+# Create IterableDataset using from_generator
+raw_proxy_dataset = IterableDataset.from_generator(proxy_data_generator)
+
+
+def get_data(benchmark_config: BenchmarkConfig) -> IterableDataset:
     """Load data based on benchmark configuration.
 
     Args:
@@ -60,7 +68,7 @@ def get_data(benchmark_config: BenchmarkConfig) -> List[Dict[str, str]]:
             split=benchmark_config.dataset_split,
             token=HF_HUB_TOKEN,
         )
-        return list(raw_dataset)
+        return raw_dataset
     except Exception as e:
         print(f"Warning: Failed to load dataset {benchmark_config.dataset_name}: {e}")
         print("Falling back to proxy data")
