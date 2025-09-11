@@ -1,7 +1,14 @@
-from swebench.inference.make_datasets.create_instance import make_code_text, PATCH_EXAMPLE
 from typing import Dict
 
-def prompt_style_2(instance: Dict[str, str], behavioral_calibration_prompt: str = "") -> str:
+from swebench.inference.make_datasets.create_instance import (
+    PATCH_EXAMPLE,
+    make_code_text,
+)
+
+
+def prompt_style_2(
+    instance: Dict[str, str], behavioral_calibration_prompt: str = ""
+) -> str:
     # Reproduced from https://github.com/SWE-bench/SWE-bench/tree/db2f39a3a6b808c70ff8f3f67ae7d0dd48829cff/swebench/inference/make_datasets/create_instance.py
     # with small modifications to include the behavioral calibration prompt
 

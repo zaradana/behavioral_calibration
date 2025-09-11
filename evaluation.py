@@ -1,7 +1,7 @@
 from typing import List
 
-from schema import BenchmarkConfig, ItemEval
 from evaluations.evaluator_factory import EvaluatorFactory
+from schema import BenchmarkConfig, ItemEval
 
 
 async def evaluate_model(
@@ -26,7 +26,7 @@ async def evaluate_model(
     """
     # Create appropriate evaluator for the benchmark type
     evaluator = EvaluatorFactory.create_evaluator(benchmark_config)
-    
+
     # Delegate evaluation to the specific evaluator
     return await evaluator.evaluate_predictions(
         predictions=predictions,

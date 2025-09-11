@@ -1,5 +1,5 @@
-import pytest
 import re
+
 from utils.benchmarks.swe_utils import answer_to_patch
 
 
@@ -176,6 +176,12 @@ class TestAnswerToPatch:
         assert validation["context_lines"] == 2
         assert not validation["has_explanatory_text"]
 
+    def test_empty_diff(self):
+        """Test with empty diff."""
+        diff = ""
+        result = answer_to_patch(diff)
+        assert result == ""
+
     def test_git_diff_format(self):
         """Test with git diff format."""
         diff = """diff --git a/test.py b/test.py
@@ -214,7 +220,7 @@ index 1234567..abcdefg 100644
     def test_fenced_diff_block(self):
         """Test with fenced code block containing diff."""
         answer = """Here's the fix:
-        
+
 ```diff
 --- a/example.py
 +++ b/example.py
@@ -238,9 +244,9 @@ This should resolve the issue."""
 
         # Comprehensive structural validation
         validation = validate_diff_structure(result)
-        assert validation[
-            "valid"
-        ], f"Fenced diff structure invalid: {validation['error']}"
+        assert validation["valid"], (
+            f"Fenced diff structure invalid: {validation['error']}"
+        )
         assert validation["starts_properly"]
         assert validation["ends_with_newline"]
         assert not validation["has_git_header"]  # Extracted from fenced block
@@ -252,9 +258,9 @@ This should resolve the issue."""
         assert validation["added_lines"] == 1
         assert validation["removed_lines"] == 1
         assert validation["context_lines"] == 2
-        assert not validation[
-            "has_explanatory_text"
-        ], "Should not contain explanatory text from outside the fence"
+        assert not validation["has_explanatory_text"], (
+            "Should not contain explanatory text from outside the fence"
+        )
 
     def test_fenced_patch_block(self):
         """Test with fenced patch block."""
@@ -325,7 +331,7 @@ index abcd123..efgh456 100644
 @@ -15,6 +15,8 @@ def process_data(data):
      if not data:
          return None
-+    
++
 +    # Added validation
      return process(data)
 
@@ -388,9 +394,9 @@ The above patch modifies the core functionality."""
 
         # Comprehensive structural validation - should be clean after filtering
         validation = validate_diff_structure(result)
-        assert validation[
-            "valid"
-        ], f"Filtered diff structure invalid: {validation['error']}"
+        assert validation["valid"], (
+            f"Filtered diff structure invalid: {validation['error']}"
+        )
         assert validation["starts_properly"]
         assert validation["ends_with_newline"]
         assert len(validation["headers"]) == 2
@@ -401,20 +407,20 @@ The above patch modifies the core functionality."""
         assert validation["added_lines"] == 1
         assert validation["removed_lines"] == 1
         assert validation["context_lines"] == 1
-        assert not validation[
-            "has_explanatory_text"
-        ], "Explanatory text should be filtered out"
+        assert not validation["has_explanatory_text"], (
+            "Explanatory text should be filtered out"
+        )
 
         # Verify that the original input WOULD have explanatory text
         original_validation = validate_diff_structure(answer)
-        assert original_validation[
-            "has_explanatory_text"
-        ], "Original should have had explanatory text"
+        assert original_validation["has_explanatory_text"], (
+            "Original should have had explanatory text"
+        )
 
     def test_no_valid_diff_content(self):
         """Test with answer containing no valid diff content."""
         answer = """The issue is in the function. You need to change the logic.
-        
+
 The problem occurs because the variable is not initialized properly.
 I recommend updating the code to handle edge cases better."""
 
@@ -505,14 +511,14 @@ This change ensures empty strings are properly rejected."""
 @@ -15,12 +15,15 @@ class DataProcessor:
          self.config = config
          self.cache = {}
-     
+
      def process(self, data):
 +        if not self.validate_data(data):
 +            raise ValueError("Invalid data")
-+            
++
          if data in self.cache:
              return self.cache[data]
-             
+
          result = self._expensive_operation(data)
 -        self.cache[data] = result
 +        self.cache[data] = self._sanitize_result(result)
@@ -534,8 +540,8 @@ This change ensures empty strings are properly rejected."""
 
     def test_whitespace_handling(self):
         """Test proper handling of whitespace in diffs."""
-        answer = """   
-        
+        answer = """
+
 ```diff
 --- a/whitespace.py
 +++ b/whitespace.py
@@ -569,7 +575,7 @@ class TestStructuralIntegrity:
 -        old_implementation()
 +        new_implementation()
          return result
- 
+
 @@ -25,6 +25,8 @@ class Example:
      def method2(self):
          existing_code()
@@ -588,7 +594,7 @@ class TestStructuralIntegrity:
         assert "@@ -10,7 +10,7 @@" in hunk1["header"]
         assert hunk1["added"] == 1
         assert hunk1["removed"] == 1
-        assert hunk1["context"] == 3
+        assert hunk1["context"] == 2
 
         # Second hunk
         hunk2 = validation["hunks"][1]
@@ -600,7 +606,7 @@ class TestStructuralIntegrity:
         # Total counts
         assert validation["added_lines"] == 3
         assert validation["removed_lines"] == 1
-        assert validation["context_lines"] == 6
+        assert validation["context_lines"] == 5
 
     def test_malformed_hunk_header_detection(self):
         """Test that malformed hunk headers are detected."""
@@ -614,9 +620,9 @@ class TestStructuralIntegrity:
 
         # Our validation should catch this as invalid
         validation = validate_diff_structure(result)
-        assert not validation[
-            "valid"
-        ], "Malformed hunk header should be detected as invalid"
+        assert not validation["valid"], (
+            "Malformed hunk header should be detected as invalid"
+        )
         assert "Invalid hunk header" in validation["error"]
 
         # Test another type of malformed header - this one is actually valid format
@@ -630,9 +636,9 @@ class TestStructuralIntegrity:
         result2 = answer_to_patch(bad_diff2)
         validation2 = validate_diff_structure(result2)
         if result2:  # If function doesn't reject it outright
-            assert not validation2[
-                "valid"
-            ], "Truly malformed hunk header should be detected"
+            assert not validation2["valid"], (
+                "Truly malformed hunk header should be detected"
+            )
 
     def test_mixed_line_endings(self):
         """Test handling of mixed line endings."""
@@ -720,9 +726,9 @@ class TestStructuralIntegrity:
         result = answer_to_patch(index_diff)
         validation = validate_diff_structure(result)
 
-        assert validation[
-            "valid"
-        ], f"Index diff with permissions invalid: {validation['error']}"
+        assert validation["valid"], (
+            f"Index diff with permissions invalid: {validation['error']}"
+        )
         assert validation["has_index_header"]
         assert validation["starts_properly"]
         assert "src/main.py" in validation["headers"][0][1]

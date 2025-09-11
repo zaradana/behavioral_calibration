@@ -4,18 +4,20 @@ import json
 import os
 from typing import List
 
+from config import OUTPUT_DIR
 from schema import ItemEval
-from utils.evaluation_utils import payoff_value
 from utils.benchmarks.swe_utils import (
     prepare_swebench_predictions,
     run_swebench_with_docker,
 )
+from utils.evaluation_utils import payoff_value
+
 from .base_evaluator import BaseBenchmarkEvaluator
 
 
 class SWEEvaluator(BaseBenchmarkEvaluator):
     """Evaluator for SWE-bench tasks."""
-    
+
     async def evaluate_predictions(
         self,
         predictions: List[ItemEval],
@@ -24,8 +26,7 @@ class SWEEvaluator(BaseBenchmarkEvaluator):
         filename_id: str,
     ) -> List[ItemEval]:
         """Evaluate SWE-bench predictions using Docker-based test execution."""
-        from config import OUTPUT_DIR
-        
+
         # Prepare predictions for SWE-bench
         swe_bench_predictions = prepare_swebench_predictions(predictions, model_name)
         predictions_path = (
@@ -42,7 +43,7 @@ class SWEEvaluator(BaseBenchmarkEvaluator):
             split=self.benchmark_config.dataset_split,
             run_id=f"{model_name}_{filename_id}",
         )
-        
+
         if swebench_report_path:
             swebench_results = json.load(open(swebench_report_path))
             resolved_ids = set(swebench_results["completed_ids"])
@@ -55,7 +56,10 @@ class SWEEvaluator(BaseBenchmarkEvaluator):
         for pred in predictions:
             is_correct = (
                 True
-                if (pred.decision == "answer" and pred.evaluation_metadata["instance_id"] in resolved_ids)
+                if (
+                    pred.decision == "answer"
+                    and pred.evaluation_metadata["instance_id"] in resolved_ids
+                )
                 else False
             )
             pay = payoff_value(is_correct, pred.decision, confidence_threshold)
@@ -69,5 +73,5 @@ class SWEEvaluator(BaseBenchmarkEvaluator):
                     evaluation_metadata=pred.evaluation_metadata,
                 )
             )
-        
+
         return outputs

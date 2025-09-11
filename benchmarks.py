@@ -27,6 +27,7 @@ Benchmarks = {
     ),
 }
 
+
 def get_benchmark_config(name: str) -> BenchmarkConfig:
     """Get a predefined benchmark configuration by name."""
     if name not in Benchmarks:

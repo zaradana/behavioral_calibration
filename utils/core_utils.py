@@ -12,21 +12,26 @@ from schema import ItemEval
 # Global flag to ensure we only configure logging once
 _logging_configured = False
 
+
 def get_logger(name: str):
     global _logging_configured
-    
+
     os.makedirs(LOGS_DIR, exist_ok=True)
-    
+
     # Only configure logging once
     if not _logging_configured:
         # Clear any existing handlers to avoid duplicates
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
             root_logger.removeHandler(handler)
-        
+
         # Configure logging
         logging.basicConfig(
-            level=logging.DEBUG if os.getenv("ENV", "dev").lower() == "dev" else logging.INFO,
+            level=(
+                logging.DEBUG
+                if os.getenv("ENV", "dev").lower() == "dev"
+                else logging.INFO
+            ),
             format="%(asctime)s - %(levelname)s - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
             handlers=[
@@ -35,10 +40,10 @@ def get_logger(name: str):
                     f"{LOGS_DIR}/logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
                 ),
             ],
-            force=True  # Force reconfiguration
+            force=True,  # Force reconfiguration
         )
         _logging_configured = True
-    
+
     return logging.getLogger(name)
 
 

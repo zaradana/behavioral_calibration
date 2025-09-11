@@ -42,11 +42,11 @@ class BehavioralCalibrationAgent:
         benchmark_config: BenchmarkConfig,
     ) -> AnswerResponse:
         """Run a single evaluation with the given parameters."""
-        
+
         # Process the instance to extract prompt data and evaluation metadata
         processor = get_instance_processor(benchmark_config)
         processed_instance = processor.process(instance)
-    
+
         user_message = PromptFactory.get_prompt(
             benchmark_config, processed_instance, target_threshold
         )
@@ -54,8 +54,6 @@ class BehavioralCalibrationAgent:
         try:
             message = self._get_messages(user_message)
             response = self._make_request(message, TEMPERATURE)
-
-            print(f"Response: {response}")
 
             # Normalize decision
             response.decision = response.decision.strip().lower()

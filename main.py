@@ -8,13 +8,7 @@ from typing import Any, Dict, List
 import pandas as pd
 
 from agent import BehavioralCalibrationAgent, get_agent
-from config import (
-    BENCHMARK,
-    CONFIDENCE_TARGETS,
-    MODELS,
-    OUTPUT_DIR,
-    TEMPERATURE,
-)
+from config import BENCHMARK, CONFIDENCE_TARGETS, MODELS, OUTPUT_DIR, TEMPERATURE
 from data_loader import get_data
 from evaluation import evaluate_model
 from schema import ConfigSchema, ItemEval

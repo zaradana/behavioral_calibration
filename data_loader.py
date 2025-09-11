@@ -1,5 +1,7 @@
 from typing import Dict, List
+
 from datasets import load_dataset
+
 from config import HF_HUB_TOKEN
 from schema import BenchmarkConfig
 from utils.core_utils import get_logger
@@ -62,6 +64,5 @@ def get_data(benchmark_config: BenchmarkConfig) -> List[Dict[str, str]]:
     except Exception as e:
         print(f"Warning: Failed to load dataset {benchmark_config.dataset_name}: {e}")
         print("Falling back to proxy data")
-        return raw_proxy_dataset 
+        return raw_proxy_dataset
     # For SWE-bench and other HuggingFace datasets - convert to list
-    

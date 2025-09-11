@@ -1,6 +1,7 @@
-from schema import ModelConfig
-from typing import List
 from dataclasses import fields
+from typing import List
+
+from schema import ModelConfig
 
 MODELS = [
     ModelConfig(
@@ -68,16 +69,20 @@ MODELS = [
     ),
 ]
 
+
 def get_model_by_field(field: str = None, field_value: str = None) -> List[ModelConfig]:
     if not field:
         return MODELS
-    
+
     # Check if filter is a valid ModelConfig field by checking dataclass fields
     valid_fields = {field.name for field in fields(ModelConfig)}
     if field not in valid_fields:
-        raise ValueError(f"Invalid filter: {field}. Must be an attribute of ModelConfig. Valid fields: {valid_fields}")
-        
+        raise ValueError(
+            f"Invalid filter: {field}. Must be an attribute of ModelConfig. Valid fields: {valid_fields}"
+        )
+
     return [model for model in MODELS if str(getattr(model, field)) == str(field_value)]
+
 
 def get_model_by_name(model_name: str) -> ModelConfig:
     return next((model for model in MODELS if model.model_name == model_name), None)

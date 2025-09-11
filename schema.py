@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional, Any
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -56,6 +56,7 @@ class ConfigSchema(BaseModel):
     CONFIDENCE_TARGETS: List[float]
     MODELS: List[ModelConfig]
 
+
 @dataclass
 class SWEBenchPrediction:
     """SWE-bench prediction format"""
@@ -87,10 +88,13 @@ class SWEBenchSummary:
     resolution_rate: float  # resolved / submitted
     completion_rate: float  # completed / submitted
 
+
 @dataclass
 class ProcessedInstance:
     """Container for processed instance data with metadata."""
+
     original_instance: Dict[str, Any]
     prompt_data: Dict[str, Any]  # Data needed for prompt generation
-    evaluation_metadata: Dict[str, Any]  # Data needed for evaluation (e.g., correct_index)
-    
+    evaluation_metadata: Dict[
+        str, Any
+    ]  # Data needed for evaluation (e.g., correct_index)

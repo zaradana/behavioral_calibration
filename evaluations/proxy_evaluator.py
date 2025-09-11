@@ -1,19 +1,21 @@
 """Proxy benchmark evaluator."""
 
 from typing import List
+
 from data_loader import get_data
-from benchmarks import get_benchmark_config
-from schema import ItemEval, BenchmarkConfig
+from schema import BenchmarkConfig, ItemEval
 from utils.evaluation_utils import payoff_value
+
 from .base_evaluator import BaseBenchmarkEvaluator
+
 
 class ProxyEvaluator(BaseBenchmarkEvaluator):
     """Evaluator for proxy benchmark tasks."""
-    
+
     def __init__(self, benchmark_config: BenchmarkConfig):
         super().__init__(benchmark_config)
         self.raw_dataset = get_data(benchmark_config=benchmark_config)
-    
+
     async def evaluate_predictions(
         self,
         predictions: List[ItemEval],
@@ -23,7 +25,7 @@ class ProxyEvaluator(BaseBenchmarkEvaluator):
     ) -> List[ItemEval]:
         """Evaluate proxy predictions using heuristic correctness check."""
         outputs: List[ItemEval] = []
-        
+
         for pred in predictions:
             is_correct = (
                 self._correctness_heuristic(pred.answer, pred.evaluation_metadata["id"])
@@ -41,11 +43,15 @@ class ProxyEvaluator(BaseBenchmarkEvaluator):
                     evaluation_metadata=pred.evaluation_metadata,
                 )
             )
-        
+
         return outputs
 
     def _correctness_heuristic(self, answer: str, item_id: str) -> bool:
         """Simple heuristic to check if an answer contains expected substrings."""
         a = (answer or "").lower()
-        expect_substrings = next(item["expect_substrings"] for item in self.raw_dataset if item["id"] == item_id)
+        expect_substrings = next(
+            item["expect_substrings"]
+            for item in self.raw_dataset
+            if item["id"] == item_id
+        )
         return all(s in a for s in (s.lower() for s in expect_substrings))

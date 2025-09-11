@@ -3,15 +3,13 @@ import os
 from dotenv import load_dotenv
 
 from benchmarks import get_benchmark_config
-from models import get_model_by_field, get_model_by_name
+from models import get_model_by_name
 
 load_dotenv()
 
 # Benchmark configuration - easily configurable
 # Option 1: Use environment variables (current approach)
-BENCHMARK = get_benchmark_config(
-    "gpqa"
-)  
+BENCHMARK = get_benchmark_config("gpqa")
 OUTPUT_DIR = "./output"
 LOGS_DIR = "./logs"
 OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
