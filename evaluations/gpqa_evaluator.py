@@ -63,7 +63,7 @@ class GPQAEvaluator(BaseBenchmarkEvaluator):
         outputs: List[ItemEval] = []
 
         for pred in predictions:
-            extracted_answer = extract_gpqa_answer(pred.answer or "")
+            extracted_answer = extract_gpqa_answer(pred.answer)
             correct_index = pred.evaluation_metadata.get("correct_index")
             is_correct = evaluate_gpqa_answer(extracted_answer, correct_index)
             pay = payoff_value(is_correct, pred.decision, confidence_threshold)
