@@ -1,8 +1,8 @@
 from datasets import IterableDataset, load_dataset
 
-from config import HF_HUB_TOKEN
-from schema import BenchmarkConfig
-from utils.core_utils import get_logger
+from ..utils.core_utils import get_logger
+from .config import HF_HUB_TOKEN
+from .schema import BenchmarkConfig
 
 logger = get_logger(__name__)
 

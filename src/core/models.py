@@ -1,7 +1,7 @@
 from dataclasses import fields
 from typing import List
 
-from schema import ModelConfig
+from .schema import ModelConfig
 
 MODELS = [
     ModelConfig(
@@ -110,3 +110,7 @@ def get_model_by_field(field: str = None, field_value: str = None) -> List[Model
 
 def get_model_by_name(model_name: str) -> ModelConfig:
     return next((model for model in MODELS if model.model_name == model_name), None)
+
+
+def get_all_models() -> List[ModelConfig]:
+    return MODELS

@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Union
 
 from swebench.harness.run_evaluation import main as run_swebench_evaluation
 
-from schema import ItemEval
-from utils.core_utils import get_logger
+from ...core.schema import ItemEval
+from ..core_utils import get_logger
 
 logger = get_logger(__name__)
 

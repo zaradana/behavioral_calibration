@@ -3,7 +3,7 @@ Predefined benchmark configurations for easy selection.
 Usage: Import and modify config.py to use these predefined configurations.
 """
 
-from schema import BenchmarkConfig
+from .schema import BenchmarkConfig
 
 # Predefined benchmark configurations
 Benchmarks = {

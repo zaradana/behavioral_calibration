@@ -1,6 +1,7 @@
+import sys
 from typing import Dict, List, Tuple
 
-from schema import ItemEval
+from ..core.schema import ItemEval
 
 
 def summarize_behavioral(rows: List[ItemEval]) -> Tuple[float, float, float]:
@@ -16,7 +17,9 @@ def summarize_behavioral(rows: List[ItemEval]) -> Tuple[float, float, float]:
         if answered
         else float("nan")
     )
-    avg_pay = sum(r.payoff_behavioral for r in rows) / n if n else 0.0
+    avg_pay = (
+        sum(r.payoff_behavioral for r in rows) / len(answered) if len(answered) else 0.0
+    )
     return acc, cov, avg_pay
 
 
@@ -64,4 +67,4 @@ def payoff_value(correct: bool, decision: str, t: float) -> float:
         return 0.0
     if correct:
         return 1.0
-    return -t / (1.0 - t)
+    return -t / (1.0 - t + sys.float_info.epsilon)

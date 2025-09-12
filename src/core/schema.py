@@ -8,14 +8,11 @@ class AnswerResponse(BaseModel):
     """Response model for SWE diagnostic evaluations."""
 
     decision: Literal["answer", "idk"] = Field(
-        default="answer",
         description="Whether to provide an answer or say 'I don't know'",
     )
-    answer: str = Field(
-        default="", description="The answer (empty if decision is 'idk')"
-    )
+    answer: str = Field(description="The answer (empty if decision is 'idk')")
     confidence: float = Field(
-        default=0.0, ge=0.0, le=1.0, description="Confidence level between 0 and 1"
+        ge=0.0, le=1.0, description="Confidence level between 0 and 1"
     )
     evaluation_metadata: Optional[Dict] = Field(
         default=None, description="Metadata needed for evaluation (e.g., correct_index)"
@@ -23,16 +20,23 @@ class AnswerResponse(BaseModel):
     id: int = Field(default=0, description="The ID of the instance")
 
 
+class SimpleAnswerResponse(BaseModel):
+    """For threshold = 0 cases (no decision required)."""
+
+    answer: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    evaluation_metadata: Optional[Dict] = Field(default=None)
+    id: int = Field(default=0)
+
+
 @dataclass
 class ItemEval:
-    id: int
-    decision: str  # "answer" or "idk"
-    answer: str
-    confidence: float
+    id: int = 0
+    decision: str = "answer"  # "answer" or "idk"
+    answer: str = ""
+    confidence: float = 0.0
+    payoff_behavioral: Optional[float] = None
     correct: Optional[bool] = None
-    payoff_behavioral: Optional[float] = (
-        None  # payoff using decision as the abstention mechanism
-    )
     evaluation_metadata: Optional[Dict] = None  # Store processed instance metadata
 
 

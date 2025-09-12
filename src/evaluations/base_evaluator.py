@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from schema import BenchmarkConfig, ItemEval
+from ..core.schema import BenchmarkConfig, ItemEval
 
 
 class BaseBenchmarkEvaluator(ABC):

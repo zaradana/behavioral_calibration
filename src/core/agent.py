@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from tenacity import before_sleep_log, retry, stop_after_attempt, wait_exponential
 
-from config import OPENROUTER_BASE_URL, TEMPERATURE
-from prompts.prompt_factory import PromptFactory
-from schema import AnswerResponse, BenchmarkConfig, ModelConfig
-from utils.instance_processor import get_instance_processor
+from ..prompts.prompt_factory import PromptFactory
+from ..utils.instance_processor import get_instance_processor
+from .config import OPENROUTER_BASE_URL, TEMPERATURE
+from .schema import AnswerResponse, BenchmarkConfig, ModelConfig, SimpleAnswerResponse
 
 load_dotenv()
 
@@ -137,7 +137,7 @@ class BehavioralCalibrationAgent:
 
         try:
             message = self._get_messages(user_message)
-            response = await self._make_request(message, TEMPERATURE)
+            response = await self._make_request(message, TEMPERATURE, target_threshold)
 
             # Normalize decision
             response.decision = response.decision.strip().lower()
@@ -170,7 +170,10 @@ class BehavioralCalibrationAgent:
             )
 
     async def _make_single_request(
-        self, messages: List[Dict[str, Any]], temperature: float
+        self,
+        messages: List[Dict[str, Any]],
+        temperature: float,
+        target_threshold: float,
     ) -> AnswerResponse:
         """Make a single API request without any retry logic."""
         completion = await self.client.chat.completions.create(
@@ -193,7 +196,18 @@ class BehavioralCalibrationAgent:
                     f"Converted answer from {type(parsed_json['answer'])} to string"
                 )
 
-            answer_response = AnswerResponse(**parsed_json)
+            if target_threshold == 0.0:
+                simple_response = SimpleAnswerResponse(**parsed_json)
+                answer_response = AnswerResponse(
+                    decision="answer",
+                    answer=simple_response.answer,
+                    confidence=simple_response.confidence,
+                    evaluation_metadata=simple_response.evaluation_metadata,
+                    id=simple_response.id,
+                )
+            else:
+                answer_response = AnswerResponse(**parsed_json)
+
             return answer_response
         except json.JSONDecodeError as e:
             logging.error(f"JSON parsing failed: {e}")
@@ -217,10 +231,13 @@ class BehavioralCalibrationAgent:
         before_sleep=before_sleep_log(logging, logging.WARNING),
     )
     async def _make_general_request(
-        self, messages: List[Dict[str, Any]], temperature: float
+        self,
+        messages: List[Dict[str, Any]],
+        temperature: float,
+        target_threshold: float,
     ) -> AnswerResponse:
         """Make API request with general error handling - used after first attempt fails with non-rate-limit error."""
-        return await self._make_single_request(messages, temperature)
+        return await self._make_single_request(messages, temperature, target_threshold)
 
     @retry(
         # For rate limiting errors: longer exponential backoff (5s, 10s, 20s, 40s)
@@ -233,19 +250,27 @@ class BehavioralCalibrationAgent:
         before_sleep=before_sleep_log(logging, logging.WARNING),
     )
     async def _make_rate_limited_request(
-        self, messages: List[Dict[str, Any]], temperature: float
+        self,
+        messages: List[Dict[str, Any]],
+        temperature: float,
+        target_threshold: float,
     ) -> AnswerResponse:
         """Make API request with longer backoff for rate limiting - tenacity handles retries."""
-        return await self._make_single_request(messages, temperature)
+        return await self._make_single_request(messages, temperature, target_threshold)
 
     async def _make_request(
-        self, messages: List[Dict[str, Any]], temperature: float
+        self,
+        messages: List[Dict[str, Any]],
+        temperature: float,
+        target_threshold: float,
     ) -> AnswerResponse:
         """Make API request with intelligent retry strategy that adapts to error types."""
 
         # First attempt - no retry, just detect error type
         try:
-            return await self._make_single_request(messages, temperature)
+            return await self._make_single_request(
+                messages, temperature, target_threshold
+            )
         except Exception as first_error:
             if is_rate_limit_error(first_error):
                 # Rate limited on first try → use rate limiting strategy
@@ -253,14 +278,18 @@ class BehavioralCalibrationAgent:
                     "Rate limiting detected on first attempt, using rate limiting strategy"
                 )
                 try:
-                    return await self._make_rate_limited_request(messages, temperature)
+                    return await self._make_rate_limited_request(
+                        messages, temperature, target_threshold
+                    )
                 except Exception as rate_limit_strategy_error:
                     # If rate limiting strategy encounters non-rate-limit error, try general strategy
                     if not is_rate_limit_error(rate_limit_strategy_error):
                         logging.info(
                             "Rate limiting strategy encountered non-rate-limit error, switching to general strategy"
                         )
-                        return await self._make_general_request(messages, temperature)
+                        return await self._make_general_request(
+                            messages, temperature, target_threshold
+                        )
                     else:
                         # Still rate limiting error after rate limiting strategy
                         logging.error(
@@ -273,7 +302,9 @@ class BehavioralCalibrationAgent:
                     f"General error detected on first attempt ({first_error}), using general strategy"
                 )
                 try:
-                    return await self._make_general_request(messages, temperature)
+                    return await self._make_general_request(
+                        messages, temperature, target_threshold
+                    )
                 except Exception as general_strategy_error:
                     # If general strategy encounters rate-limit error, try rate limiting strategy
                     if is_rate_limit_error(general_strategy_error):
@@ -281,7 +312,7 @@ class BehavioralCalibrationAgent:
                             "General strategy encountered rate limiting, switching to rate limiting strategy"
                         )
                         return await self._make_rate_limited_request(
-                            messages, temperature
+                            messages, temperature, target_threshold
                         )
                     else:
                         # Still general error after general strategy∂

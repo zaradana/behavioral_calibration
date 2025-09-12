@@ -2,8 +2,7 @@
 
 from typing import Dict, Type
 
-from schema import BenchmarkConfig
-
+from ..core.schema import BenchmarkConfig
 from .base_evaluator import BaseBenchmarkEvaluator
 from .gsm8k_evaluator import GSM8KEvaluator
 from .mc_evaluator import MCEvaluator

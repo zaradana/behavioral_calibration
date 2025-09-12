@@ -2,8 +2,8 @@ import os
 
 from dotenv import load_dotenv
 
-from benchmarks import get_benchmark_config
-from models import get_model_by_name
+from .benchmarks import get_benchmark_config
+from .models import get_model_by_name
 
 load_dotenv()
 

@@ -4,14 +4,13 @@ import json
 import os
 from typing import List
 
-from config import OUTPUT_DIR
-from schema import ItemEval
-from utils.benchmarks.swe_utils import (
+from ..core.config import OUTPUT_DIR
+from ..core.schema import ItemEval
+from ..utils.benchmarks.swe_utils import (
     prepare_swebench_predictions,
     run_swebench_with_docker,
 )
-from utils.evaluation_utils import payoff_value
-
+from ..utils.evaluation_utils import payoff_value
 from .base_evaluator import BaseBenchmarkEvaluator
 
 

@@ -1,7 +1,7 @@
 from typing import List
 
-from evaluations.evaluator_factory import EvaluatorFactory
-from schema import BenchmarkConfig, ItemEval
+from ..evaluations.evaluator_factory import EvaluatorFactory
+from .schema import BenchmarkConfig, ItemEval
 
 
 async def evaluate_model(

@@ -2,9 +2,8 @@
 
 from typing import List
 
-from schema import ItemEval
-from utils.evaluation_utils import payoff_value
-
+from ..core.schema import ItemEval
+from ..utils.evaluation_utils import payoff_value
 from .base_evaluator import BaseBenchmarkEvaluator
 
 

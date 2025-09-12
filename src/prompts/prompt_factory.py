@@ -1,11 +1,14 @@
-from prompts.behavioral_calibration_prompt import behavioral_calibration_prompt_template
-from prompts.gsm8k_prompt import get_gsm8k_prompt
-from prompts.mc_prompt import get_mc_prompt
-from prompts.proxy_prompt import get_proxy_prompt
-from prompts.svamp_prompt import get_svamp_prompt
-from prompts.swe_prompt import prompt_style_2 as get_swe_prompt
-from schema import BenchmarkConfig
-from utils.instance_processor import ProcessedInstance
+from ..core.schema import BenchmarkConfig
+from ..utils.instance_processor import ProcessedInstance
+from .behavioral_calibration_prompt import (
+    behavioral_calibration_prompt_template,
+    behavioral_calibration_prompt_template_with_abstinence,
+)
+from .gsm8k_prompt import get_gsm8k_prompt
+from .mc_prompt import get_mc_prompt
+from .proxy_prompt import get_proxy_prompt
+from .svamp_prompt import get_svamp_prompt
+from .swe_prompt import prompt_style_2 as get_swe_prompt
 
 
 class PromptFactory:
@@ -15,9 +18,17 @@ class PromptFactory:
         processed_instance: ProcessedInstance,
         target_threshold: float,
     ) -> str:
-        behavioral_calibration_prompt = behavioral_calibration_prompt_template.format(
-            target_threshold=target_threshold
-        )
+        if target_threshold < 0.0:
+            raise ValueError("Target threshold must be greater than 0.0")
+        elif target_threshold > 0.0:
+            behavioral_calibration_prompt = (
+                behavioral_calibration_prompt_template_with_abstinence.format(
+                    target_threshold=target_threshold
+                )
+            )
+        else:
+            behavioral_calibration_prompt = behavioral_calibration_prompt_template
+
         prompt_registry = {
             "swe": get_swe_prompt,
             "gpqa": get_mc_prompt,

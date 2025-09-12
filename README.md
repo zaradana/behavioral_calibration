@@ -30,17 +30,17 @@ The scoring system incentivizes models to only answer when they are sufficiently
 ### Adding New Benchmarks
 
 The modular pattern makes it easy to add new benchmarks:
-1. **Instance processor**: Create an instance processor in `utils/instance_processor.py` to process the instance for the prompt, and evaluation.
-2. **Create evaluator**: Implement `BaseBenchmarkEvaluator` in `evaluations/`
+1. **Instance processor**: Create an instance processor in `src/utils/instance_processor.py` to process the instance for the prompt, and evaluation.
+2. **Create evaluator**: Implement `BaseBenchmarkEvaluator` in `src/evaluations/`
 3. **Register evaluator**: Add to `EvaluatorFactory`
-4. **Add prompts**: Create prompt templates in `prompts/`
-5. **Add prompt factory**: Add prompt factory in `prompts/prompt_factory.py`
-6. **Configure**: Add benchmark config to `benchmarks.py`
+4. **Add prompts**: Create prompt templates in `src/prompts/`
+5. **Add prompt factory**: Add prompt factory in `src/prompts/prompt_factory.py`
+6. **Configure**: Add benchmark config to `src/core/benchmarks.py`
 
 
 ### Adding New Models
 1. **Find model**: Find the model in the [OpenRouter](https://openrouter.ai/models) and get the model ID.
-2. **Create model config**: Create a model config in `models.py` and add it to the `MODELS` list.
+2. **Create model config**: Create a model config in `src/core/models.py` and add it to the `MODELS` list.
 ```python
 ModelConfig(
     model_name="your-model",
@@ -122,15 +122,37 @@ ModelConfig(
 
 ### Basic Evaluation
 
-Run the evaluation on all configured models:
+Run the evaluation using the default configuration:
 
 ```bash
-uv run python main.py
+uv run python -m src.cli.assess_calibration
 ```
+
+### Command Line Options
+
+You can override the default configuration using command line arguments:
+
+```bash
+# Use specific models (overrides config)
+uv run python -m src.cli.assess_calibration --models gpt-4o claude-3.5-sonnet
+
+# Use specific benchmark (overrides config)
+uv run python -m src.cli.assess_calibration --benchmark gsm8k
+
+# Combine both
+uv run python -m src.cli.assess_calibration --models gpt-4o-mini --benchmark gpqa
+
+# See all available options
+uv run python -m src.cli.assess_calibration --help
+```
+
+**Available Models:** Run `--help` to see the current list of supported models
+
+**Available Benchmarks:** `swe_bench_lite`, `proxy_data`, `gpqa`, `truthfulqa`, `gsm8k`, `svamp`
 
 ### Configuration
 
-Edit `config.py` to customize:
+Edit `src/core/config.py` to customize:
 
 **Models**: Add/remove models from the `MODELS` list
 ```python
@@ -149,7 +171,7 @@ CONFIDENCE_TARGETS = [0.0, 0.5, 0.8]  # Confidence thresholds to test
 
 **Benchmark Selection**: Choose which benchmarks to evaluate
 ```python
-# Configure benchmark in config.py
+# Configure benchmark in src/core/config.py
 BENCHMARK = get_benchmark_config("gpqa") # or "swe_bench_lite", "proxy_data"
 ```
 

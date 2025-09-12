@@ -6,8 +6,8 @@ from typing import Dict, List
 
 import pandas as pd
 
-from config import LOGS_DIR
-from schema import ItemEval
+from ..core.config import LOGS_DIR
+from ..core.schema import ItemEval
 
 # Global flag to ensure we only configure logging once
 _logging_configured = False

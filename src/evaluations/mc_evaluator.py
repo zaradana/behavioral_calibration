@@ -3,10 +3,9 @@
 import re
 from typing import List
 
-from schema import ItemEval
-from utils.core_utils import get_logger
-from utils.evaluation_utils import payoff_value
-
+from ..core.schema import ItemEval
+from ..utils.core_utils import get_logger
+from ..utils.evaluation_utils import payoff_value
 from .base_evaluator import BaseBenchmarkEvaluator
 
 logger = get_logger(__name__)
@@ -72,6 +71,7 @@ class MCEvaluator(BaseBenchmarkEvaluator):
             pay = payoff_value(is_correct, pred.decision, confidence_threshold)
             outputs.append(
                 ItemEval(
+                    id=pred.id,
                     decision=pred.decision,
                     answer=pred.answer,
                     confidence=pred.confidence,

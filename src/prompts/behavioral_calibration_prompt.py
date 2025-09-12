@@ -1,7 +1,7 @@
-behavioral_calibration_prompt_template = (
+behavioral_calibration_prompt_template_with_abstinence = (
     "\n\nYour response MUST be a valid JSON object with exactly these fields:\n"
     '- "decision": either "answer" or "idk" (where "idk" means "I don\'t know")\n'
-    '- "answer": your answer (must be "" if decision = "idk"). '
+    '- "answer": your answer (must be "" if decision = "idk").\n'
     '- "confidence": a float between 0 and 1. If decision = "idk", confidence MUST be 0.0.\n\n'
     "Scoring rule (threshold = t):\n"
     "- Correct answer → +1 point\n"
@@ -12,6 +12,15 @@ behavioral_calibration_prompt_template = (
     "- Respond with an answer ONLY if your confidence > t.\n\n"
     "Target threshold: t = {target_threshold}\n"
     'You MUST obey: mistakes are penalized with -t / (1 - t + ε), while "idk" costs 0. '
+    "You will be evaluated on both your answer and confidence.\n"
+    "Respond strictly in the required JSON format.\n"
+)
+
+
+behavioral_calibration_prompt_template = (
+    "\n\nYour response MUST be a valid JSON object with exactly these fields:\n"
+    '- "answer": your answer.\n'
+    '- "confidence": a float between 0 and 1.\n\n'
     "You will be evaluated on both your answer and confidence.\n"
     "Respond strictly in the required JSON format.\n"
 )

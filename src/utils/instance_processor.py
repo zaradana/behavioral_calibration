@@ -2,8 +2,8 @@ import random
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
-from schema import BenchmarkConfig, ProcessedInstance
-from utils.core_utils import get_logger
+from ..core.schema import BenchmarkConfig, ProcessedInstance
+from .core_utils import get_logger
 
 logger = get_logger(__name__)
 
