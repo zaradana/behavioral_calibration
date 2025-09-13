@@ -21,9 +21,9 @@ from ..core.data_loader import get_data
 from ..core.evaluation import evaluate_model
 from ..core.models import get_all_models, get_model_by_name
 from ..core.schema import ConfigSchema, ItemEval
-from ..reporting.visualization import plot_overlays
+from ..reporting.behavioral_threshold_plots import plot_overlays
 from ..utils.core_utils import get_logger, save_model_results
-from ..utils.evaluation_utils import confidence_by_correctness, summarize_behavioral
+from ..utils.evaluation_utils import summarize_behavioral
 
 logger = get_logger(__name__)
 
@@ -65,7 +65,7 @@ async def process_confidence_threshold(
         model_name,
         confidence_threshold,
     )
-    # data = list(data)[:5] # for testing
+    # data = list(data)[:15] # for testing
     predictions: List[ItemEval] = await get_predictions(
         data, agent, confidence_threshold
     )
@@ -97,16 +97,16 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Examples:
   # Use config defaults
-  python -m src.cli.assess_calibration
+  python -m src.cli.measure_calibration
 
   # Evaluate specific models
-  python -m src.cli.assess_calibration --models gpt-4o claude-3.5-sonnet
+  python -m src.cli.measure_calibration --models gpt-4o claude-3.5-sonnet
 
   # Use specific benchmark
-  python -m src.cli.assess_calibration --benchmark gsm8k
+  python -m src.cli.measure_calibration --benchmark gsm8k
 
   # Combine models and benchmark
-  python -m src.cli.assess_calibration --models gpt-4o-mini --benchmark gpqa
+  python -m src.cli.measure_calibration --models gpt-4o-mini --benchmark gpqa
         """,
     )
 
@@ -160,6 +160,7 @@ async def main():
     data = get_data(benchmark_config=benchmark_config)
 
     agg_results_by_model: Dict[str, Dict[float, Dict[str, float]]] = {}
+    evaluation_results_by_model: Dict[str, Dict[float, List[ItemEval]]] = {}
     output = []
     filename_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
@@ -206,6 +207,9 @@ async def main():
         for confidence_threshold, results in threshold_results:
             evaluation_results[confidence_threshold] = results
 
+        # Store evaluation results for plotting
+        evaluation_results_by_model[model_name] = evaluation_results
+
         file_path = (
             f"{OUTPUT_DIR}/{model_name}/{model_name}_predictions_{filename_id}.csv"
         )
@@ -215,13 +219,10 @@ async def main():
         agg_results_by_model[model_name] = {}
 
         logger.info(f"\nModel: {model_name}")
-        logger.info(
-            "t\t\tAcc_beh\t\tCov_beh\t\tPay_beh\t\tConf_Correct\tConf_Incorrect"
-        )
+        logger.info("t\t\tAcc_beh\t\tCov_beh\t\tPay_beh")
         for confidence_threshold in sorted(evaluation_results.keys()):
             rows = evaluation_results[confidence_threshold]
             acc_b, cov_b, pay_b = summarize_behavioral(rows)
-            conf_metrics = confidence_by_correctness(rows)
 
             acc_b_str = (
                 "NaN"
@@ -229,27 +230,8 @@ async def main():
                 else f"{acc_b:.3f}"
             )
 
-            # Format confidence metrics
-            conf_correct_str = (
-                "NaN"
-                if (
-                    isinstance(conf_metrics["avg_conf_correct"], float)
-                    and math.isnan(conf_metrics["avg_conf_correct"])
-                )
-                else f"{conf_metrics['avg_conf_correct']:.3f}"
-            )
-            conf_incorrect_str = (
-                "NaN"
-                if (
-                    isinstance(conf_metrics["avg_conf_incorrect"], float)
-                    and math.isnan(conf_metrics["avg_conf_incorrect"])
-                )
-                else f"{conf_metrics['avg_conf_incorrect']:.3f}"
-            )
-
             logger.info(
-                f"{confidence_threshold:.2f}\t{acc_b_str}\t\t{cov_b:.3f}\t\t{pay_b:.3f}\t\t"
-                f"{conf_correct_str}\t\t{conf_incorrect_str}"
+                f"{confidence_threshold:.2f}\t{acc_b_str}\t\t{cov_b:.3f}\t\t{pay_b:.3f}"
             )
             output.append(
                 {
@@ -259,8 +241,6 @@ async def main():
                     "acc_b": acc_b,
                     "cov_b": cov_b,
                     "pay_b": pay_b,
-                    "avg_conf_correct": conf_metrics["avg_conf_correct"],
-                    "avg_conf_incorrect": conf_metrics["avg_conf_incorrect"],
                 }
             )
 
@@ -268,8 +248,6 @@ async def main():
                 "acc_b": acc_b,
                 "cov_b": cov_b,
                 "pay_b": pay_b,
-                "avg_conf_correct": conf_metrics["avg_conf_correct"],
-                "avg_conf_incorrect": conf_metrics["avg_conf_incorrect"],
             }
 
     file_path = f"{OUTPUT_DIR}/aggregated/aggregated_results_{filename_id}.csv"
@@ -292,7 +270,12 @@ async def main():
         json.dump(config.model_dump(), f, indent=4, default=str)
     logger.info("Config saved to %s", config_json_path)
 
-    plot_overlays(agg_results_by_model, filename_id, benchmark_config.dataset_name)
+    plot_overlays(
+        agg_results_by_model,
+        evaluation_results_by_model,
+        filename_id,
+        benchmark_config.dataset_name,
+    )
 
 
 if __name__ == "__main__":

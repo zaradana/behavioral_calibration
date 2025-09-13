@@ -2,7 +2,7 @@ from ..core.schema import BenchmarkConfig
 from ..utils.instance_processor import ProcessedInstance
 from .behavioral_calibration_prompt import (
     behavioral_calibration_prompt_template,
-    behavioral_calibration_prompt_template_with_abstinence,
+    build_behavioral_calibration_prompt_with_abstinence,
 )
 from .gsm8k_prompt import get_gsm8k_prompt
 from .mc_prompt import get_mc_prompt
@@ -22,9 +22,7 @@ class PromptFactory:
             raise ValueError("Target threshold must be greater than 0.0")
         elif target_threshold > 0.0:
             behavioral_calibration_prompt = (
-                behavioral_calibration_prompt_template_with_abstinence.format(
-                    target_threshold=target_threshold
-                )
+                build_behavioral_calibration_prompt_with_abstinence(target_threshold)
             )
         else:
             behavioral_calibration_prompt = behavioral_calibration_prompt_template

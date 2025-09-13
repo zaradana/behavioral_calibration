@@ -125,7 +125,7 @@ ModelConfig(
 Run the evaluation using the default configuration:
 
 ```bash
-uv run python -m src.cli.assess_calibration
+uv run python -m src.cli.measure_calibration
 ```
 
 ### Command Line Options
@@ -134,16 +134,16 @@ You can override the default configuration using command line arguments:
 
 ```bash
 # Use specific models (overrides config)
-uv run python -m src.cli.assess_calibration --models gpt-4o claude-3.5-sonnet
+uv run python -m src.cli.measure_calibration --models gpt-4o claude-3.5-sonnet
 
 # Use specific benchmark (overrides config)
-uv run python -m src.cli.assess_calibration --benchmark gsm8k
+uv run python -m src.cli.measure_calibration --benchmark gsm8k
 
 # Combine both
-uv run python -m src.cli.assess_calibration --models gpt-4o-mini --benchmark gpqa
+uv run python -m src.cli.measure_calibration --models gpt-4o-mini --benchmark gpqa
 
 # See all available options
-uv run python -m src.cli.assess_calibration --help
+uv run python -m src.cli.measure_calibration --help
 ```
 
 **Available Models:** Run `--help` to see the current list of supported models

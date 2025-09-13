@@ -29,6 +29,10 @@ class CalibrationAnalyzer:
         """
         self.data = data
         self.baseline_data = data[data["target_confidence"] == 0.0]
+        logger.info(
+            f"📊 Baseline data: {len(self.baseline_data)} predictions (target_confidence = 0.0)"
+        )
+
         self.target_confidence_values = list(data["target_confidence"].unique())
         self.target_confidence_values.remove(0.0)
         logger.info(f"Target confidence values: {self.target_confidence_values}")
@@ -51,7 +55,7 @@ class CalibrationAnalyzer:
         simulated_data = self.baseline_data.copy()
 
         # Replace answers with "idk" if confidence is below threshold
-        low_confidence_mask = simulated_data["confidence"] < threshold_decimal
+        low_confidence_mask = simulated_data["confidence"] <= threshold_decimal
         simulated_data.loc[low_confidence_mask, "decision"] = "idk"
 
         # Convert to ItemEval objects for helper functions
@@ -207,20 +211,15 @@ class CalibrationAnalyzer:
                 "simulated_avg_conf_incorrect": sim_row["avg_conf_incorrect"],
                 "empirical_payoff": emp_row["average_payoff"],
                 "simulated_payoff": sim_row["average_payoff"],
-                "accuracy_diff": emp_row["accuracy"] - sim_row["accuracy"],
-                "coverage_diff": emp_row["coverage"] - sim_row["coverage"],
-                "abstention_diff": emp_row["abstention_rate"],
-                "answered_questions_diff": emp_row["answered_questions"]
-                - sim_row["answered_questions"],
-                "total_questions_diff": emp_row["total_questions"]
-                - sim_row["total_questions"],
-                "avg_conf_correct_diff": emp_row["avg_conf_correct"]
-                - sim_row["avg_conf_correct"],
-                "avg_conf_incorrect_diff": emp_row["avg_conf_incorrect"]
-                - sim_row["avg_conf_incorrect"],
-                "abstention_rate_diff": emp_row["abstention_rate"]
-                - sim_row["abstention_rate"],
-                "payoff_diff": emp_row["average_payoff"] - sim_row["average_payoff"],
+                "accuracy_diff": f"{emp_row['accuracy'] - sim_row['accuracy']:.3f} ({(emp_row['accuracy'] - sim_row['accuracy']) / emp_row['accuracy'] * 100:.2f}%)",
+                "coverage_diff": f"{emp_row['coverage'] - sim_row['coverage']:.3f} ({(emp_row['coverage'] - sim_row['coverage']) / emp_row['coverage'] * 100:.2f}%)",
+                "abstention_diff": f"{emp_row['abstention_rate'] - sim_row['abstention_rate']:.3f} ({(emp_row['abstention_rate'] - sim_row['abstention_rate']) / emp_row['abstention_rate'] * 100:.2f}%)",
+                "answered_questions_diff": f"{emp_row['answered_questions'] - sim_row['answered_questions']:.3f} ({(emp_row['answered_questions'] - sim_row['answered_questions']) / emp_row['answered_questions'] * 100:.2f}%)",
+                "total_questions_diff": f"{emp_row['total_questions'] - sim_row['total_questions']:.3f} ({(emp_row['total_questions'] - sim_row['total_questions']) / emp_row['total_questions'] * 100:.2f}%)",
+                "avg_conf_correct_diff": f"{emp_row['avg_conf_correct'] - sim_row['avg_conf_correct']:.3f} ({(emp_row['avg_conf_correct'] - sim_row['avg_conf_correct']) / emp_row['avg_conf_correct'] * 100:.2f}%)",
+                "avg_conf_incorrect_diff": f"{emp_row['avg_conf_incorrect'] - sim_row['avg_conf_incorrect']:.3f} ({(emp_row['avg_conf_incorrect'] - sim_row['avg_conf_incorrect']) / emp_row['avg_conf_incorrect'] * 100:.2f}%)",
+                "abstention_rate_diff": f"{emp_row['abstention_rate'] - sim_row['abstention_rate']:.3f} ({(emp_row['abstention_rate'] - sim_row['abstention_rate']) / emp_row['abstention_rate'] * 100:.2f}%)",
+                "payoff_diff": f"{emp_row['average_payoff'] - sim_row['average_payoff']:.3f} ({(emp_row['average_payoff'] - sim_row['average_payoff']) / emp_row['average_payoff'] * 100:.2f}%)",
             }
             comparisons.append(comparison)
 
