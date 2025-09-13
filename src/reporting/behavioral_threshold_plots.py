@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 
 
 def calculate_calibration_curve(
-    evaluation_results: List[ItemEval], n_bins: int = 10
+    evaluation_results: List[ItemEval], n_bins: int = 100
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Calculate calibration curve data for confidence vs accuracy plot.

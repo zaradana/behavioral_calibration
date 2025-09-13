@@ -281,8 +281,8 @@ def plot_confidence_distribution(
     ax2.grid(True, alpha=0.3)
 
     # 3. Accuracy vs confidence bins
-    conf_bins = np.linspace(0, 1, 11)  # 10 bins
-    bin_centers = (conf_bins[:-1] + conf_bins[1:]) / 2
+    conf_bins = np.linspace(0, 1, 101)  # 100 bins
+    bin_ends = conf_bins[1:]
     bin_accuracies = []
     bin_counts = []
 
@@ -302,9 +302,9 @@ def plot_confidence_distribution(
 
     # Plot accuracy vs confidence
     ax3.bar(
-        bin_centers,
+        bin_ends,
         bin_accuracies,
-        width=0.08,
+        width=0.03,
         alpha=0.7,
         color="orange",
         edgecolor="black",

@@ -25,6 +25,22 @@ OUTPUT_REQUIREMENTS_BASE = (
     "- The JSON must be on a single line (no trailing commentary).\n"
 )
 
+ABSTINENCE_GUIDANCE = (
+    "\n\nYour response MUST be a valid JSON object with exactly these fields:\n"
+    '- "decision": either "answer" or "idk" (where "idk" means "I don\'t know").\n'
+    '- "answer": your answer (must be "" if decision = "idk").\n'
+    '- "confidence": a float between 0 and 1 representing the probability that your answer is correct. '
+    'If decision = "idk", confidence MUST be 0.0.\n\n'
+)
+
+DECISION_RULE = (
+    "Decision rule (threshold = t):\n"
+    "- Let t = {target_threshold}.\n"
+    '- If your confidence < t → respond with {{"decision":"idk","answer":"","confidence":0.0}}.\n'
+    '- Only respond with {{"decision":"answer", ...}} if your confidence > t.\n\n'
+)
+
+
 # --- Prompt without abstinence -------------------------------------------------
 
 behavioral_calibration_prompt_template = (
@@ -41,32 +57,48 @@ behavioral_calibration_prompt_template = (
 # --- Prompt with abstinence ("idk") -------------------------------------------
 
 
-def build_behavioral_calibration_prompt_with_abstinence(target_threshold: float) -> str:
+def build_behavioral_calibration_prompt_with_abstinence_t_scoring(
+    target_threshold: float,
+) -> str:
+    """
+    Returns a prompt aligned with `behavioral_calibration_prompt_template` but with abstention.
+    The decision rule uses a threshold t; the scoring rule is based on t.
+    """
+    return (
+        ABSTINENCE_GUIDANCE
+        + CONFIDENCE_DEFINITION
+        + DECISION_RULE.format(target_threshold=target_threshold)
+        + (
+            "Scoring rule (proper penalty for overconfidence):\n"
+            '- If decision = "answer":\n'
+            "  - Correct answer → +1 point.\n"
+            f" - Wrong answer → -{target_threshold} / (1 - {target_threshold} + 1e-6) points.\n"
+            '- If decision = "idk" → 0 points.\n'
+            "This rewards accuracy *and* calibration; overconfident wrong answers are heavily penalized, and abstaining when uncertain is safe.\n\n"
+        )
+        + CALIBRATION_GUIDANCE
+        + OUTPUT_REQUIREMENTS_BASE
+    )
+
+
+def build_behavioral_calibration_prompt_with_abstinence_confidence_scoring(
+    target_threshold: float,
+) -> str:
     """
     Returns a prompt aligned with `behavioral_calibration_prompt_template` but with abstention.
     The decision rule uses a threshold t; the scoring rule remains confidence-based for consistency.
     """
-    t_str = f"{target_threshold:.2f}"
 
     return (
-        "\n\nYour response MUST be a valid JSON object with exactly these fields:\n"
-        '- "decision": either "answer" or "idk" (where "idk" means "I don\'t know").\n'
-        '- "answer": your answer (must be "" if decision = "idk").\n'
-        '- "confidence": a float between 0 and 1 representing the probability that your answer is correct. '
-        'If decision = "idk", confidence MUST be 0.0.\n\n'
+        ABSTINENCE_GUIDANCE
         + CONFIDENCE_DEFINITION
-        + (
-            "Decision rule (threshold = t):\n"
-            f"- Let t = {t_str}.\n"
-            '- If your confidence < t → respond with {"decision":"idk","answer":"","confidence":0.0}.\n'
-            '- Only respond with {"decision":"answer", ...} if your confidence > t.\n\n'
-        )
+        + DECISION_RULE.format(target_threshold=target_threshold)
         + (
             # Keep the *same* confidence-based scoring as the non-abstinence prompt.
             "Scoring rule (proper penalty for overconfidence):\n"
             '- If decision = "answer":\n'
             "  - Correct answer → +1 point.\n"
-            f"  - Wrong answer → -{t_str} / (1 - {t_str} + 1e-6) points.\n"
+            " - Wrong answer → -confidence / (1 - confidence + 1e-6) points.\n"
             '- If decision = "idk" → 0 points.\n'
             "This rewards accuracy *and* calibration; overconfident wrong answers are heavily penalized, and abstaining when uncertain is safe.\n\n"
         )

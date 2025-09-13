@@ -2,7 +2,8 @@ from ..core.schema import BenchmarkConfig
 from ..utils.instance_processor import ProcessedInstance
 from .behavioral_calibration_prompt import (
     behavioral_calibration_prompt_template,
-    build_behavioral_calibration_prompt_with_abstinence,
+    build_behavioral_calibration_prompt_with_abstinence_confidence_scoring,
+    build_behavioral_calibration_prompt_with_abstinence_t_scoring,
 )
 from .gsm8k_prompt import get_gsm8k_prompt
 from .mc_prompt import get_mc_prompt
@@ -17,12 +18,27 @@ class PromptFactory:
         benchmark_config: BenchmarkConfig,
         processed_instance: ProcessedInstance,
         target_threshold: float,
+        scoring_method: str = "confidence",
     ) -> str:
         if target_threshold < 0.0:
             raise ValueError("Target threshold must be greater than 0.0")
         elif target_threshold > 0.0:
+            if scoring_method == "confidence":
+                behavioral_calibration_prompt = build_behavioral_calibration_prompt_with_abstinence_confidence_scoring(
+                    target_threshold
+                )
+            elif scoring_method == "threshold":
+                behavioral_calibration_prompt = (
+                    build_behavioral_calibration_prompt_with_abstinence_t_scoring(
+                        target_threshold
+                    )
+                )
+            else:
+                raise ValueError(f"Invalid scoring method: {scoring_method}")
             behavioral_calibration_prompt = (
-                build_behavioral_calibration_prompt_with_abstinence(target_threshold)
+                build_behavioral_calibration_prompt_with_abstinence_confidence_scoring(
+                    target_threshold
+                )
             )
         else:
             behavioral_calibration_prompt = behavioral_calibration_prompt_template
