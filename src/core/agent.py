@@ -327,10 +327,21 @@ class BehavioralCalibrationAgent:
         # Remove any code block markers
         response = response.replace("```json", "").replace("```", "").strip()
 
-        # Remove any non-JSON text before/after the JSON object
+        # Find the first complete JSON object
         try:
             start = response.index("{")
-            end = response.rindex("}") + 1
+            brace_count = 0
+            end = start
+
+            for i in range(start, len(response)):
+                if response[i] == "{":
+                    brace_count += 1
+                elif response[i] == "}":
+                    brace_count -= 1
+                    if brace_count == 0:
+                        end = i + 1
+                        break
+
             json_part = response[start:end]
             logging.debug(f"Extracted JSON: {json_part}")
             return json_part
